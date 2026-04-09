@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Pendências SS/PME</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --azul:#0054B8;--azulDark:#00173D;--azulMid:#003580;--azulLight:#94B8D2;
+  --vermelho:#EF402F;--laranjaEsc:#F05A22;--laranja:#F5821F;--amarelo:#FDB713;
+  --vb:#34C785;--salmao:#E8927C;
+  --bg:#0B1929;--bgC:#111F33;--bgCL:#162740;
+  --brd:#1E3A5F;--glow:rgba(0,84,184,0.35);
+  --tP:#E8F0FB;--tS:#7A9BBF;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Sans Pro',Arial,sans-serif;background:var(--bg);color:var(--tP);min-height:100vh}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px}
+
+.nav{background:linear-gradient(135deg,var(--azulDark),var(--bg));padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--brd)}
+.nav-l{display:flex;align-items:center;gap:12px}.nav-l .tit{font-weight:900;font-size:16px;color:#fff}.nav-l .sep{width:1px;height:22px;background:var(--brd)}.nav-l .sub{color:var(--tS);font-weight:600;font-size:13px}
+.nav-r{display:flex;align-items:center;gap:12px}.nav-r .dt{color:var(--tS);font-size:12px}.nav-r .bdg{background:linear-gradient(135deg,var(--laranja),var(--laranjaEsc));color:#fff;font-weight:700;font-size:11.5px;padding:4px 14px;border-radius:16px;box-shadow:0 2px 8px rgba(240,90,34,0.3)}
+.ct{max-width:1440px;margin:0 auto;padding:18px 22px 40px}
+.tabs{display:flex;gap:4px;margin-bottom:18px;background:var(--bgC);border-radius:10px;padding:4px;border:1px solid var(--brd);width:fit-content}
+.tab{padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;color:var(--tS);background:transparent;transition:all .15s}.tab.active{background:linear-gradient(135deg,var(--azul),var(--azulMid));color:#fff;box-shadow:0 2px 10px var(--glow)}.tab:hover:not(.active){color:var(--tP)}
+.upl-s{max-width:680px;margin:0 auto;padding:60px 24px;text-align:center}
+.upl-z{border:2px dashed var(--brd);border-radius:20px;padding:50px 32px;cursor:pointer;transition:all .3s;background:var(--bgC)}.upl-z:hover,.upl-z.drag{border-color:var(--laranja);background:var(--bgCL)}
+.upl-z .ic{font-size:56px;margin-bottom:14px;filter:drop-shadow(0 0 12px rgba(245,130,31,0.4))}.upl-z h2{font-size:22px;font-weight:900;color:var(--tP)}.upl-z p{font-size:14px;color:var(--tS);margin-top:6px}
+.upl-n{color:var(--tS);margin-top:22px;font-size:14px}.upl-n strong{color:var(--tP)}
+.err{margin-top:16px;padding:12px;background:rgba(239,64,47,.15);border-radius:10px;color:var(--vermelho);font-weight:600;font-size:14px;border:1px solid var(--vermelho)}
+.ok-msg{margin-top:16px;padding:12px;background:rgba(52,199,133,.15);border-radius:10px;color:var(--vb);font-weight:600;font-size:14px;border:1px solid var(--vb)}
+.tb{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.btn{padding:7px 16px;border-radius:8px;border:none;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-p{background:linear-gradient(135deg,var(--azul),var(--azulMid));color:#fff;box-shadow:0 2px 12px var(--glow)}.btn-p:hover{filter:brightness(1.15)}
+.btn-o{background:var(--laranja);color:#fff}.btn-g{background:transparent;color:var(--tS);border:1px solid var(--brd)}
+.btn-exp{background:linear-gradient(135deg,var(--vb),#2a9d6a);color:#fff;box-shadow:0 2px 8px rgba(52,199,133,0.3)}.btn-exp:hover{filter:brightness(1.15)}
+.btn-ref{background:linear-gradient(135deg,#5B6B7F,#3D4D5F);color:#fff}.btn-ref:hover{filter:brightness(1.2)}
+.sel{padding:7px 12px;border-radius:8px;border:1px solid var(--brd);background:var(--bgC);color:var(--tP);font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;outline:none}.sel option{background:var(--bgC);color:var(--tP)}
+.sel-sm{padding:6px 10px;font-size:11.5px;max-width:180px}
+.btn-sm{padding:5px 12px;font-size:11.5px}
+
+/* STATUS MODE TOGGLE */
+.stm-btn{padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:inherit;color:var(--tS);background:transparent;transition:all .15s}
+.stm-btn.active{background:linear-gradient(135deg,var(--azul),var(--azulMid));color:#fff;box-shadow:0 2px 8px var(--glow)}
+.stm-btn:hover:not(.active){color:var(--tP)}
+
+/* MULTI-SELECT */
+.msel{position:relative;display:inline-block}
+.msel-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--brd);background:var(--bgC);color:var(--tP);font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
+.msel-btn:hover{border-color:var(--azulLight)}
+.msel-btn.has-sel{border-color:var(--azul);background:rgba(0,84,184,.15);color:#fff}
+.msel-drop{display:none;position:absolute;top:100%;left:0;margin-top:4px;background:var(--bgCL);border:1px solid var(--brd);border-radius:10px;padding:8px 6px;z-index:200;min-width:220px;max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.msel-drop.open{display:block}
+.msel-drop label{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--tP);transition:background .1s}
+.msel-drop label:hover{background:rgba(0,84,184,.12)}
+.msel-drop input[type=checkbox]{accent-color:var(--azul);width:15px;height:15px;cursor:pointer}
+.msel-drop .ms-count{font-size:10px;color:var(--tS);margin-left:auto}
+.tb-i{font-size:12px;color:var(--tS);margin-left:auto}
+.chips{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}.chips .lbl{font-size:12px;color:var(--tS);font-weight:600}
+.chip{padding:4px 12px;border-radius:16px;font-size:11.5px;font-weight:700;cursor:pointer;border:none;font-family:inherit;background:rgba(245,130,31,.12);color:var(--laranja);transition:all .15s}.chip.act{background:var(--laranja);color:#fff}.chip:hover{filter:brightness(1.2)}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--bgC);border-radius:12px;padding:14px 16px;border:1px solid var(--brd);position:relative;overflow:hidden;cursor:pointer;transition:all .15s}.kpi:hover{transform:translateY(-2px);border-color:var(--azulLight)}.kpi.act{border-color:var(--azul);box-shadow:0 0 16px var(--glow)}
+.kpi .ki{position:absolute;right:12px;top:10px;font-size:24px;opacity:.12}.kpi .kl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--tS);margin-bottom:4px}.kpi .kv{font-size:26px;font-weight:900;line-height:1}.kpi .ks{font-size:11px;color:var(--tS);margin-top:3px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}@media(max-width:900px){.g2{grid-template-columns:1fr}.kpi-row{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
+.box{background:var(--bgC);border-radius:14px;padding:18px 20px;border:1px solid var(--brd)}.box-t{font-size:13px;font-weight:900;color:var(--tP);display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.rl{max-height:380px;overflow-y:auto;padding-right:4px}
+.ri{display:grid;grid-template-columns:28px 1fr 46px 46px 46px;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:all .12s}.ri:nth-child(odd){background:rgba(255,255,255,.015)}.ri:hover{background:rgba(0,84,184,.1)}.ri.act{background:rgba(0,84,184,.2);border-color:var(--azul)}
+.rp{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px;color:#fff}
+.rn{font-size:12px;font-weight:700;color:var(--tP);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rg{font-size:10px;color:var(--tS)}
+.mv{font-size:13px;font-weight:900;text-align:center}.ml{font-size:8.5px;color:var(--tS);text-transform:uppercase;text-align:center}
+.aging{display:flex;align-items:flex-end;gap:8px;height:130px;padding:18px 0 22px;position:relative}.aging-ln{position:absolute;bottom:18px;left:0;right:0;height:1px;background:var(--brd)}
+.ac{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;z-index:1}.av{font-size:11px;font-weight:900;color:var(--tP)}.ab{width:60%;max-width:44px;border-radius:4px 4px 0 0;transition:height .5s}.al{font-size:10px;font-weight:600;color:var(--tS)}
+.alrt{margin-top:10px;padding:10px 14px;background:rgba(239,64,47,.08);border-radius:10px;border:1px solid rgba(239,64,47,.2);display:flex;align-items:center;gap:10px}
+.daily-box{background:var(--bgC);border-radius:14px;padding:18px 20px;border:1px solid var(--brd);margin-bottom:20px}
+.daily-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:12px}
+.dc{background:var(--bgCL);border-radius:10px;padding:14px;border:1px solid var(--brd)}.dc .dl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--tS);margin-bottom:4px}.dc .dv{font-size:24px;font-weight:900;line-height:1}.dc .ds{font-size:11px;color:var(--tS);margin-top:3px}
+.evo{margin-top:14px}.evo-t{font-size:10px;font-weight:700;color:var(--tS);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}.evo-b{display:flex;align-items:flex-end;gap:4px;height:50px}
+.ec{flex:1;text-align:center}.en{font-size:10px;font-weight:900;color:var(--tP)}.eb{margin:0 auto;width:60%;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--azul),var(--azulMid))}.ed{font-size:9px;color:var(--tS);margin-top:2px}
+.tbl{width:100%;border-collapse:separate;border-spacing:0 3px;font-size:12px}
+.tbl thead th{text-align:left;padding:7px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--tS);border-bottom:1px solid var(--brd)}
+.tbl tbody tr{transition:background .1s}.tbl tbody tr:nth-child(even){background:var(--bgC)}.tbl tbody tr:hover{background:rgba(0,84,184,.08)}.tbl td{padding:7px 8px;vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap}
+.b-g{background:rgba(52,199,133,.12);color:var(--vb);border:1px solid rgba(52,199,133,.2)}.b-y{background:rgba(253,183,19,.12);color:var(--amarelo);border:1px solid rgba(253,183,19,.2)}.b-r{background:rgba(239,64,47,.12);color:var(--vermelho);border:1px solid rgba(239,64,47,.2)}.b-gr{background:rgba(255,255,255,.05);color:var(--tS);border:1px solid rgba(255,255,255,.08)}.b-bl{background:rgba(0,84,184,.12);color:var(--azulLight);border:1px solid rgba(0,84,184,.2)}
+.ger-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.gc{background:var(--bgCL);border-radius:12px;padding:16px;border:1px solid var(--brd)}.gc h4{font-size:14px;font-weight:900;color:var(--tP);margin-bottom:10px}
+.gs{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}.gs:last-child{border:none}.gs .gl{font-size:12px;color:var(--tS)}.gs .gv{font-size:14px;font-weight:900}
+.ft{text-align:center;padding:22px 0 6px;font-size:11px;color:var(--tS)}
+#dash{display:none}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-l">
+    <span class="tit">📊 Painel de Pendências SS/PME</span>
+    <div class="sep"></div>
+    <span class="sub">Painel Gerencial de Propostas</span>
+  </div>
+  <div class="nav-r">
+    <span class="dt" id="nDt"></span>
+    <span class="bdg" id="nBdg" style="display:none"></span>
+  </div>
+</div>
+
+<div id="uplS" class="upl-s">
+  <div class="upl-z" id="dz">
+    <div class="ic" id="uIc">📊</div>
+    <h2 id="uTx">Arraste sua planilha aqui</h2>
+    <p>ou clique para selecionar (.xlsx)</p>
+    <input type="file" id="fI" accept=".xlsx,.xls" style="display:none">
+  </div>
+  <div id="eB" class="err" style="display:none"></div>
+  <div id="okB" class="ok-msg" style="display:none"></div>
+  <p class="upl-n">Aba <strong>BASE STATUS</strong> será lida automaticamente.<br>Os dados acumulam no histórico.</p>
+  <div id="hI" style="margin-top:28px;padding:16px;background:var(--bgC);border-radius:12px;border:1px solid var(--brd);display:none"></div>
+</div>
+
+<div id="dash" class="ct">
+  <div class="tabs">
+    <button class="tab active" onclick="swTab('ov')">📋 Visão Operacional</button>
+    <button class="tab" onclick="swTab('ge')">📊 Visão Gerencial</button>
+  </div>
+  <div class="tb">
+    <button class="btn btn-p" onclick="document.getElementById('fI2').click()">📁 Importar Planilha</button>
+    <button class="btn btn-ref" onclick="location.reload()">🔄 Atualizar</button>
+    <input type="file" id="fI2" accept=".xlsx,.xls" style="display:none">
+    <select class="sel" id="sG"><option value="">Todos os Gerentes</option></select>
+    <select class="sel" id="sE"><option value="">Todos Executivos</option></select>
+    <select class="sel" id="sC"><option value="">Todas Corretoras</option></select>
+    <button class="btn btn-o" id="bC" style="display:none" onclick="clrF()">✕ Limpar</button>
+    <button class="btn btn-exp" onclick="exportXLS()">📥 Exportar Excel</button>
+    <span class="tb-i" id="tI"></span>
+    <button class="btn btn-g" onclick="resetAll()">🗑 Resetar</button>
+  </div>
+  <div class="chips" id="cR" style="display:none"></div>
+
+  <div id="tOv">
+    <div class="kpi-row" id="kR"></div>
+    <div class="daily-box" id="dB"><div class="box-t"><span class="dot" style="background:var(--vb);box-shadow:0 0 8px var(--vb)"></span> Comparativo Diário</div><div class="daily-grid" id="dG"></div></div>
+    <div class="g2">
+      <div class="box"><div class="box-t"><span class="dot" style="background:var(--amarelo);box-shadow:0 0 8px var(--amarelo)"></span> Ranking Executivos</div><div class="rl" id="rL"></div></div>
+      <div class="box"><div class="box-t"><span class="dot" style="background:var(--laranjaEsc);box-shadow:0 0 8px var(--laranjaEsc)"></span> Envelhecimento</div><div class="aging" id="aC"><div class="aging-ln"></div></div><div id="aA"></div><div id="eS"></div></div>
+    </div>
+    <div class="box">
+      <div class="box-t" id="tT"><span class="dot" style="background:var(--laranjaEsc);box-shadow:0 0 8px var(--laranjaEsc)"></span> Detalhamento</div>
+      <!-- INLINE FILTERS -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <div style="position:relative;flex:1;min-width:200px">
+          <input type="text" id="sBusca" placeholder="🔍 Buscar proposta, empresa ou controle..." oninput="render()" style="width:100%;padding:8px 14px;border-radius:8px;border:1px solid var(--brd);background:var(--bgCL);color:var(--tP);font-size:12.5px;font-family:inherit;outline:none">
+        </div>
+        <div class="msel" id="msSB"><button class="msel-btn" onclick="toggleMS('msSB')">Status Bitix ▾</button><div class="msel-drop" id="msSB-drop"></div></div>
+        <div class="msel" id="msSM"><button class="msel-btn" onclick="toggleMS('msSM')">Á. Médica ▾</button><div class="msel-drop" id="msSM-drop"></div></div>
+        <div class="msel" id="msSC"><button class="msel-btn" onclick="toggleMS('msSC')">Cadastro ▾</button><div class="msel-drop" id="msSC-drop"></div></div>
+        <select class="sel sel-sm" id="fCor" onchange="render()"><option value="">Corretora</option></select>
+        <select class="sel sel-sm" id="fExe" onchange="render()"><option value="">Executivo</option></select>
+        <button class="btn btn-g btn-sm" onclick="clearTableFilters()">✕ Limpar filtros</button>
+      </div>
+      <!-- STATUS MODE TOGGLE -->
+      <div style="display:flex;gap:4px;margin-bottom:14px;background:var(--bgCL);border-radius:8px;padding:3px;width:fit-content;border:1px solid var(--brd)">
+        <button class="stm-btn" id="stmStatus" onclick="setStMode('status')">Status</button>
+        <button class="stm-btn" id="stmCompleto" onclick="setStMode('completo')">Status Completo</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl"><thead><tr><th>Controle</th><th>Empresa</th><th>Recebimento</th><th>Vigência</th><th>Dias</th><th>Á.Médica</th><th>Cadastro</th><th>Status</th><th>Vidas</th><th>Executivo</th><th>Gerente</th><th>Corretora</th></tr></thead><tbody id="tB"></tbody></table>
+        <div id="tM" style="margin-top:6px;display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tGe" style="display:none">
+    <div class="kpi-row" id="gK"></div>
+    <div class="ger-grid" id="gG"></div>
+  </div>
+
+  <div class="ft">Painel de Pendências SS/PME — Painel Gerencial de Propostas</div>
+</div>
+
+<script>
+const GM={"Leonardo Mariano":["IZABELE LAURENTINO ABC","VIVIAN AMBROSIO"],"Camila Foiadelli":["PATRICIA PESSOA","WILDER PATZI","ERIKA SOUZA","CAMILA PERTINHEZ"],"Estevão Cardoso":["PABLO AMORA","LAIS MARTINS","AGATHA SAKAMOTO","JONATHAN LEAL"],"Carlos Mayson":["FABIO AVELLAR","BIANCA PEIXOTO"],"Maria Cabral":["DANIELA FREDERICO","TBA CAMPINAS","KAIQUE SILVA","FLAVIA AUANA"],"Marcelo Lima":["DANIELA NOVAIS","GUILHERME MUSACHI","KAROLLAINNY LOPES"]};
+const EG={};Object.entries(GM).forEach(([g,es])=>es.forEach(e=>{EG[e]=g}));
+const AG=Object.keys(GM);
+const EXCL=new Set(["INSIDE SALES","#N/D","0",""]);
+const TD=new Date();TD.setHours(0,0,0,0);
+const SK="hp10";const SKH="hp10h";
+const fmt=d=>{try{const t=new Date(d);return isNaN(t)?"—":t.toLocaleDateString("pt-BR")}catch{return"—"}};
+const fS=d=>{try{const t=new Date(d);return isNaN(t)?"—":`${String(t.getDate()).padStart(2,"0")}/${String(t.getMonth()+1).padStart(2,"0")}`}catch{return"—"}};
+const dD=(a,b)=>{try{return Math.round((new Date(a)-new Date(b))/864e5)}catch{return 0}};
+const isP=r=>{const s=String(r.sb).toUpperCase();return s!=="PROCESSADO"&&s!=="CANCELADO";};
+const vE=r=>r.ex&&r.ex!==""&&!EXCL.has(r.ex);
+
+let H=[],D=null,CD=null,LU=null,sG=null,sE=null,sC=null,fM="todos",cT="ov",stMode="status";
+
+// SAFE STORAGE
+function sSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){console.warn("Storage:",e);return false}}
+function sGet(k){try{return localStorage.getItem(k)}catch{return null}}
+function sRm(k){try{localStorage.removeItem(k)}catch{}}
+
+window.addEventListener("DOMContentLoaded",()=>{
+  // Load saved pending data (ONLY pendencies, not all rows)
+  try{const s=sGet(SK);if(s){const p=JSON.parse(s);D=p.data;CD=p.date;LU=p.lastUpd||null;}}catch{}
+  try{const s=sGet(SKH);if(s)H=JSON.parse(s)}catch{}
+
+  const sg=document.getElementById("sG");
+  AG.forEach(g=>{const o=document.createElement("option");o.value=g;o.textContent=g;sg.appendChild(o)});
+  sg.addEventListener("change",e=>{sG=e.target.value||null;sE=null;updE();render()});
+  document.getElementById("sE").addEventListener("change",e=>{sE=e.target.value||null;render()});
+  document.getElementById("sC").addEventListener("change",e=>{sC=e.target.value||null;render()});
+
+  const fi=document.getElementById("fI"),fi2=document.getElementById("fI2"),dz=document.getElementById("dz");
+  dz.addEventListener("click",()=>fi.click());
+  dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("drag")});
+  dz.addEventListener("dragleave",()=>dz.classList.remove("drag"));
+  dz.addEventListener("drop",e=>{e.preventDefault();dz.classList.remove("drag");if(e.dataTransfer.files[0])proc(e.dataTransfer.files[0])});
+  fi.addEventListener("change",e=>{if(e.target.files[0])proc(e.target.files[0])});
+  fi2.addEventListener("change",e=>{if(e.target.files[0])proc(e.target.files[0])});
+
+  if(H.length>0){const hi=document.getElementById("hI");hi.style.display="block";hi.innerHTML=`<div style="font-size:14px;font-weight:700;color:var(--tP);margin-bottom:8px">📅 Histórico: ${H.length} dia(s)</div>`+H.map(h=>`<span style="display:inline-block;margin:3px;padding:4px 10px;border-radius:14px;background:rgba(0,84,184,.15);color:var(--azulLight);font-size:11px;font-weight:600">${fmt(h.date)} — ${h.pc} pend.</span>`).join("")}
+  if(D)show();
+});
+
+function proc(f){
+  document.getElementById("uIc").textContent="⏳";
+  document.getElementById("uTx").textContent="Processando...";
+  document.getElementById("eB").style.display="none";
+  document.getElementById("okB").style.display="none";
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+      const sn=wb.SheetNames.find(n=>n.toUpperCase().includes("BASE STATUS"));
+      if(!sn)throw new Error("Aba 'BASE STATUS' não encontrada!");
+      const raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:null});
+
+      // Parse ALL rows but only KEEP non-processed for storage
+      const allRows=raw.filter(r=>r.NU_PROPOSTA!=null).map(r=>({
+        proposta:String(r.NU_PROPOSTA||""),controle:r.NU_CONTROLE,dtR:r.DT_RECEBIMENTO,dtV:r.DT_VIGENCIA,
+        emp:String(r.NM_PESSOA_RAZAO_SOCIAL||"").substring(0,60),sb:r.STATUS_PROPOSTA_BITIX||"",
+        sm:r["STATUS_AREA_MÉDICA"]||r.STATUS_AREA_MEDICA||"",sc:r.STATUS_CADASTRO||"",
+        ex:r.EXECUTIVO!=null&&r.EXECUTIVO!==""?String(r.EXECUTIVO):"",cor:String(r.CORRETORA||"").substring(0,50),tp:r.TP_EMPRESA||"",
+        te:r.NU_TOTAL_EMPREGADO||0,op:r.OPERADORA||"",ds:r.DT_STATUS
+      }));
+
+      // Get all processed proposal IDs (for resolved tracking)
+      const procIds=allRows.filter(r=>String(r.sb).toUpperCase()==="PROCESSADO").map(r=>r.proposta);
+
+      // Only store pendencies + valid executivos
+      const pendOnly=allRows.filter(r=>{const s=String(r.sb).toUpperCase();return s!=="PROCESSADO"&&s!=="CANCELADO";});
+
+      const m=f.name.match(/(\d{1,2})/);
+      const day=m?parseInt(m[1]):TD.getDate();
+      const ds=`${TD.getFullYear()}-${String(TD.getMonth()+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+
+      D=pendOnly;CD=ds;
+
+      // Save timestamp of last import
+      const now=new Date();
+      const lastUpd=`${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()} às ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+      
+      // Save ONLY pendencies (much smaller)
+      const saved=sSet(SK,JSON.stringify({date:ds,data:pendOnly,lastUpd:lastUpd}));
+
+      // Save compact daily snapshot
+      const snap={
+        date:ds,pc:pendOnly.length,
+        pp:pendOnly.map(r=>r.proposta),
+        procIds:procIds.slice(0,5000),
+        ac:pendOnly.filter(r=>r.dtV&&new Date(r.dtV)<TD).length,
+        tv:pendOnly.reduce((a,r)=>a+(r.te||0),0)
+      };
+      H=H.filter(h=>h.date!==ds);H.push(snap);H.sort((a,b)=>a.date.localeCompare(b.date));
+      if(H.length>30)H=H.slice(-30);
+      sSet(SKH,JSON.stringify(H));
+
+      if(!saved){
+        document.getElementById("okB").style.display="block";
+        document.getElementById("okB").innerHTML="⚠️ Dados carregados mas não foi possível salvar no navegador (memória cheia). O painel funciona normalmente nesta sessão.";
+      }
+
+      LU=lastUpd;
+      show();
+    }catch(err){
+      document.getElementById("uIc").textContent="📊";
+      document.getElementById("uTx").textContent="Arraste sua planilha aqui";
+      document.getElementById("eB").style.display="block";
+      document.getElementById("eB").textContent="❌ "+err.message;
+    }
+  };r.readAsArrayBuffer(f);
+}
+
+function show(){document.getElementById("uplS").style.display="none";document.getElementById("dash").style.display="block";updE();render()}
+function updE(){const se=document.getElementById("sE");se.innerHTML='<option value="">Todos Executivos</option>';(sG?(GM[sG]||[]):Object.values(GM).flat()).sort().forEach(e=>{const o=document.createElement("option");o.value=e;o.textContent=e;if(e===sE)o.selected=true;se.appendChild(o)})}
+function clrF(){sG=null;sE=null;sC=null;fM="todos";document.getElementById("sG").value="";document.getElementById("sC").value="";updE();render()}
+function resetAll(){H=[];D=null;CD=null;LU=null;sG=null;sE=null;sC=null;fM="todos";stMode="status";sRm(SK);sRm(SKH);document.getElementById("uplS").style.display="block";document.getElementById("dash").style.display="none";document.getElementById("uIc").textContent="📊";document.getElementById("uTx").textContent="Arraste sua planilha aqui";document.getElementById("hI").style.display="none"}
+function setF(m){fM=(fM===m)?"todos":m;render()}
+function setStMode(m){stMode=m;render()}
+function cE(e){sE=sE===e?null:e;const g=EG[e];if(g){sG=g;document.getElementById("sG").value=g;}updE();document.getElementById("sE").value=sE||"";render()}
+function swTab(t){cT=t;document.querySelectorAll(".tab").forEach((el,i)=>{el.classList.toggle("active",i===(t==="ov"?0:1))});document.getElementById("tOv").style.display=t==="ov"?"block":"none";document.getElementById("tGe").style.display=t==="ge"?"block":"none";render()}
+
+function render(){
+  if(!D)return;
+  // Global exclusions: must have executivo válido, exclude DEVOLVIDA ADM
+  let fd=D.filter(r=>{
+    if(!r.ex||EXCL.has(r.ex))return false;
+    if(String(r.sb).toUpperCase()==="DEVOLVIDA ADM")return false;
+    return true;
+  });
+  if(sG&&GM[sG])fd=fd.filter(r=>GM[sG].includes(r.ex));
+  if(sE)fd=fd.filter(r=>r.ex===sE);
+  if(sC)fd=fd.filter(r=>r.cor===sC);
+
+  // Update corretora dropdown with available corretoras
+  updC(fd);
+
+  const pend_raw=fd;
+  // Apply status mode globally to KPIs and table
+  const pend=stMode==="status"?pend_raw.filter(r=>String(r.sb).toUpperCase()!=="EM DIGITACAO"):pend_raw;
+  const atras=pend.filter(r=>r.dtV&&new Date(r.dtV)<TD);
+  const fut=pend.filter(r=>r.dtV&&new Date(r.dtV)>=TD);
+  // Daniel: vigência até 10 dias no futuro + >3 dias parada na área médica (não liberada)
+  const dan=pend.filter(r=>{
+    if(!r.dtV)return false;
+    const vigDias=dD(new Date(r.dtV),TD);
+    if(vigDias<0||vigDias>10)return false;
+    const diasParada=Math.max(0,dD(TD,r.dtR));
+    if(diasParada<=3)return false;
+    const med=String(r.sm).toUpperCase();
+    return med!==""&&med!=="LIBERADA";
+  });
+  const mO=pend.filter(r=>String(r.sm).toUpperCase()==="LIBERADA"&&String(r.sc).toUpperCase()!=="CONCLUIDO");
+  const cO=pend.filter(r=>String(r.sc).toUpperCase()==="CONCLUIDO"&&r.sm&&String(r.sm).toUpperCase()!=="LIBERADA");
+  const pme30=pend.filter(r=>(r.te||0)>=30);
+  const tV=pend.reduce((a,r)=>a+(r.te||0),0);
+  // Vidas só de DEVOLVIDA para o KPI Pendências
+  const devolvidas=pend.filter(r=>String(r.sb).toUpperCase()==="DEVOLVIDA");
+  const tVDev=devolvidas.reduce((a,r)=>a+(r.te||0),0);
+
+  let res=0,newP=0;
+  const prev=H.length>=2?H[H.length-2]:null;
+  const cur=H.length>=1?H[H.length-1]:null;
+  if(prev&&cur){
+    const prevSet=new Set(prev.pp||[]);
+    const curPendSet=new Set(pend.map(r=>r.proposta));
+    const procSet=new Set(cur.procIds||[]);
+    res=[...prevSet].filter(p=>procSet.has(p)||!curPendSet.has(p)).length;
+    newP=[...curPendSet].filter(p=>!prevSet.has(p)).length;
+  }
+
+  document.getElementById("nDt").textContent=LU?`Última atualização: ${LU}`:fmt(CD);
+  const nb=document.getElementById("nBdg");nb.style.display="inline";nb.textContent=`⚡ ${tV} vidas · ${pend.length} propostas`;
+  document.getElementById("bC").style.display=(sG||sE||sC)?"inline":"none";
+  document.getElementById("tI").textContent=`${LU?LU:fmt(CD)} • ${H.length} dia(s)`;
+
+  const cr=document.getElementById("cR");
+  if(sG&&GM[sG]){cr.style.display="flex";cr.innerHTML=`<span class="lbl">EQUIPE ${sG.toUpperCase()}:</span>`+GM[sG].map(e=>`<button class="chip ${sE===e?"act":""}" onclick="cE('${e}')">${e}</button>`).join("")}
+  else cr.style.display="none";
+
+  if(cT==="ov")renderOv(pend,atras,fut,dan,mO,cO,pme30,tV,tVDev,devolvidas,res,newP,prev);
+  if(cT==="ge")renderGe(pend,tV);
+}
+
+function renderOv(pend,atras,fut,dan,mO,cO,pme30,tV,tVDev,devolvidas,res,newP,prev){
+  // Calculate lives for each group
+  const vAtras=atras.reduce((a,r)=>a+(r.te||0),0);
+  const vDan=dan.reduce((a,r)=>a+(r.te||0),0);
+  const vMO=mO.reduce((a,r)=>a+(r.te||0),0);
+  const vCO=cO.reduce((a,r)=>a+(r.te||0),0);
+  const vPme=pme30.reduce((a,r)=>a+(r.te||0),0);
+
+  const kpis=[
+    {id:"todos",l:"Pendências",v:`${tVDev}`,c:"var(--vermelho)",s:`${devolvidas.length} devolvidas · ${pend.length} propostas total`,i:"📋"},
+    {id:"atrasadas",l:"Vig. Atrasada",v:`${vAtras}`,c:"var(--laranjaEsc)",s:`${atras.length} propostas`,i:"⏰"},
+    {id:"daniel",l:"Alerta Daniel",v:`${vDan}`,c:"var(--azul)",s:`${dan.length} prop. · vig ≤10d · >3d á.médica`,i:"🎯"},
+    {id:"medXcad",l:"Méd✓ Cad✗",v:`${vMO}`,c:"var(--salmao)",s:`${mO.length} prop. · Inverso: ${cO.length} (${vCO} vidas)`,i:"⚡"},
+    {id:"pme30",l:"PME ≥30 vidas",v:`${vPme}`,c:"var(--azulLight)",s:`${pme30.length} propostas`,i:"🏢"},
+  ];
+  document.getElementById("kR").innerHTML=kpis.map(k=>`<div class="kpi ${fM===k.id?"act":""}" style="border-left:4px solid ${k.c}" onclick="setF('${k.id}')"><div class="ki">${k.i}</div><div class="kl">${k.l}</div><div class="kv" style="color:${k.c};text-shadow:0 0 20px ${k.c}33">${k.v} <span style="font-size:12px;font-weight:600;opacity:0.7">vidas</span></div><div class="ks">${k.s}</div></div>`).join("");
+
+  // Daily comparison — uses filtered prev data if gerente/exec selected
+  let prevPc="—",prevVidas="—",filteredRes=res,filteredNew=newP;
+  if(prev){
+    // Recalculate resolved/new based on current filter
+    let prevData=prev.pp||[];
+    const curPendProps=new Set(pend.map(r=>r.proposta));
+    const procSet=new Set((H.length>=1?H[H.length-1].procIds:[])||[]);
+    filteredRes=[...prevData].filter(p=>procSet.has(p)||!curPendProps.has(p)).length;
+    filteredNew=[...curPendProps].filter(p=>!new Set(prevData).has(p)).length;
+    prevPc=prev.pc;
+    prevVidas=prev.tv||0;
+  }
+
+  document.getElementById("dG").innerHTML=[
+    dcH("Resolvidas",filteredRes,"var(--vb)",prev?`${fS(prev.date)} → ${fS(CD)}`:"importe +1 dia"),
+    dcH("Novas pendências",filteredNew,"var(--laranja)","entraram hoje"),
+    dcH("Vidas pendentes",tV,"var(--azulLight)",`${pend.length} propostas`),
+    dcH("Pend. ontem",prevPc,"var(--tS)",prev?`${fS(prev.date)} · ${prevVidas} vidas`:"—"),
+  ].join("");
+
+  let vL;
+  if(fM==="todos")vL=[...pend];else if(fM==="atrasadas")vL=[...atras];else if(fM==="daniel")vL=[...dan];else if(fM==="medXcad")vL=[...mO,...cO];else if(fM==="pme30")vL=[...pme30];else vL=[...pend];
+
+  // Reset filter if it was on removed "5dias"
+  if(fM==="5dias"){fM="todos";vL=[...pend];}
+
+  // Update toggle button states
+  document.getElementById("stmStatus").classList.toggle("active",stMode==="status");
+  document.getElementById("stmCompleto").classList.toggle("active",stMode==="completo");
+
+  vL.sort((a,b)=>{const da=a.dtV?new Date(a.dtV).getTime():Infinity;const db=b.dtV?new Date(b.dtV).getTime():Infinity;return da-db});
+
+  const eg={};pend.filter(r=>vE(r)).forEach(r=>{
+    if(!eg[r.ex])eg[r.ex]={e:r.ex,t:0,vDev:0,oldest:null};
+    eg[r.ex].t++;
+    if(String(r.sb).toUpperCase()==="DEVOLVIDA") eg[r.ex].vDev+=(r.te||0);
+    if(r.dtV){const d=new Date(r.dtV);if(!eg[r.ex].oldest||d<eg[r.ex].oldest)eg[r.ex].oldest=d;}
+  });
+  const rl=Object.values(eg).sort((a,b)=>b.vDev-a.vDev);
+  const cs=["var(--vermelho)","var(--laranja)","var(--amarelo)","var(--brd)"];
+  document.getElementById("rL").innerHTML=rl.map((x,i)=>`<div class="ri ${sE===x.e?"act":""}" onclick="cE('${x.e}')" style="grid-template-columns:28px 1fr 50px 60px 80px">
+    <div class="rp" style="background:${cs[Math.min(i,3)]}">${i+1}</div>
+    <div><div class="rn">${x.e}</div><div class="rg">${EG[x.e]||"—"}</div></div>
+    <div><div class="mv" style="color:var(--tP)">${x.t}</div><div class="ml">Prop.</div></div>
+    <div><div class="mv" style="color:var(--vermelho)">${x.vDev}</div><div class="ml">Vidas Dev.</div></div>
+    <div><div class="mv" style="color:${x.oldest&&x.oldest<TD?"var(--vermelho)":"var(--tS)"}; font-size:11px">${x.oldest?fS(x.oldest):"—"}</div><div class="ml">+ Antiga</div></div>
+  </div>`).join("");
+
+  const bk=[{l:"Hoje",mn:0,mx:0,c:"var(--vb)"},{l:"1d",mn:1,mx:1,c:"var(--azulLight)"},{l:"2-3d",mn:2,mx:3,c:"var(--amarelo)"},{l:"4-5d",mn:4,mx:5,c:"var(--laranja)"},{l:"6-10d",mn:6,mx:10,c:"var(--laranjaEsc)"},{l:">10d",mn:11,mx:999,c:"var(--vermelho)"}];
+  const bc=bk.map(b=>({...b,n:pend.filter(r=>{const d=Math.max(0,dD(TD,r.dtR));return d>=b.mn&&d<=b.mx}).length}));
+  const mx=Math.max(...bc.map(c=>c.n),1);
+  document.getElementById("aC").innerHTML='<div class="aging-ln"></div>'+bc.map(b=>`<div class="ac"><span class="av">${b.n}</span><div class="ab" style="height:${(b.n/mx)*85}px;background:linear-gradient(180deg,${b.c},${b.c}88);${b.n>0?"min-height:3px;":""}box-shadow:0 0 8px ${b.c}44"></div><span class="al">${b.l}</span></div>`).join("");
+  document.getElementById("aA").innerHTML="";
+
+  if(H.length>1){const mx2=Math.max(...H.map(h=>h.pc),1);document.getElementById("eS").innerHTML=`<div class="evo"><div class="evo-t">Evolução</div><div class="evo-b">${H.slice(-15).map(h=>`<div class="ec"><div class="en">${h.pc}</div><div class="eb" style="height:${(h.pc/mx2)*35}px;${h.pc>0?"min-height:3px":""}"></div><div class="ed">${fS(h.date)}</div></div>`).join("")}</div></div>`}else document.getElementById("eS").innerHTML="";
+
+  const ts=sE?` — ${sE}`:sG?` — Equipe ${sG}`:"";
+
+  // Populate inline filter dropdowns (from vL before inline filtering)
+  popMS("msSB","Status Bitix",vL.map(r=>String(r.sb).toUpperCase()).filter(Boolean));
+  popMS("msSM","Á. Médica",vL.map(r=>String(r.sm).toUpperCase()).filter(s=>s&&s.length>0));
+  popMS("msSC","Cadastro",vL.map(r=>String(r.sc).toUpperCase()).filter(s=>s&&s.length>0));
+  popSel("fCor",[...new Set(vL.map(r=>r.cor).filter(s=>s&&s.length>1))].sort());
+  popSel("fExe",[...new Set(vL.filter(r=>vE(r)).map(r=>r.ex))].sort());
+
+  // Apply inline filters
+  const sBusca=(document.getElementById("sBusca").value||"").toUpperCase().trim();
+  const selSB=getMS("msSB");
+  const selSM=getMS("msSM");
+  const selSC=getMS("msSC");
+  const fCorv=document.getElementById("fCor").value;
+  const fExev=document.getElementById("fExe").value;
+
+  let tblData=vL;
+  if(sBusca) tblData=tblData.filter(r=>(String(r.proposta).includes(sBusca)||String(r.controle).toUpperCase().includes(sBusca)||String(r.emp).toUpperCase().includes(sBusca)));
+  if(selSB.length) tblData=tblData.filter(r=>selSB.includes(String(r.sb).toUpperCase()));
+  if(selSM.length) tblData=tblData.filter(r=>selSM.includes(String(r.sm).toUpperCase()));
+  if(selSC.length) tblData=tblData.filter(r=>selSC.includes(String(r.sc).toUpperCase()));
+  if(fCorv) tblData=tblData.filter(r=>r.cor===fCorv);
+  if(fExev) tblData=tblData.filter(r=>r.ex===fExev);
+
+  const tblVidas=tblData.reduce((a,r)=>a+(r.te||0),0);
+  document.getElementById("tT").innerHTML=`<span class="dot" style="background:var(--laranjaEsc);box-shadow:0 0 8px var(--laranjaEsc)"></span> Detalhamento${ts} — <span style="color:var(--azulLight)">${tblVidas} vidas</span> · ${tblData.length} propostas`;
+  document.getElementById("tB").innerHTML=tblData.slice(0,150).map((r,i)=>{
+    const dias=Math.max(0,dD(TD,r.dtR));const va=r.dtV&&new Date(r.dtV)<TD;
+    return`<tr><td style="font-weight:700;color:var(--laranja)">${r.controle||"—"}</td><td style="max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tP)">${r.emp}</td><td style="font-size:11px;color:var(--tS)">${fmt(r.dtR)}</td><td><span style="color:${va?"var(--vermelho)":"var(--vb)"};font-weight:700">${fmt(r.dtV)}</span></td><td>${dbg(dias)}</td><td>${sb(r.sm)}</td><td>${sb(r.sc)}</td><td>${sb(r.sb)}</td><td style="font-weight:700;color:var(--azulLight)">${r.te||0}</td><td style="font-size:11px;font-weight:600;color:var(--tP)">${r.ex||"—"}</td><td style="font-size:11px;color:var(--tS)">${EG[r.ex]||"—"}</td><td style="font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tS)">${r.cor||"—"}</td></tr>`;
+  }).join("");
+  // Total vidas footer
+  const shownVidas=tblData.slice(0,150).reduce((a,r)=>a+(r.te||0),0);
+  const moHtml=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 14px;background:var(--bgCL);border-radius:8px;border:1px solid var(--brd)"><span style="font-size:13px;font-weight:900;color:var(--azulLight)">Total: ${tblVidas} vidas · ${tblData.length} propostas</span>${tblData.length>150?`<span style="font-size:11px;color:var(--tS)">Mostrando 150 de ${tblData.length}</span>`:""}</div>`;
+  document.getElementById("tM").style.display="block";document.getElementById("tM").innerHTML=moHtml;
+}
+
+function renderGe(pend,tV){
+  const medP=pend.filter(r=>r.sm&&String(r.sm).toUpperCase()!=="LIBERADA");
+  const cadP=pend.filter(r=>r.sc&&String(r.sc).toUpperCase()!=="CONCLUIDO");
+  const p30=pend.filter(r=>(r.te||0)>=30);
+  document.getElementById("gK").innerHTML=[
+    kH("Total Pendências",pend.length,"var(--vermelho)","propostas abertas","📋"),
+    kH("Vidas Pendentes",tV,"var(--azulLight)","não processadas","👥"),
+    kH("Pend. Á. Médica",medP.length,"var(--salmao)",`${medP.reduce((a,r)=>a+(r.te||0),0)} vidas`,"🏥"),
+    kH("Pend. Cadastro",cadP.length,"var(--amarelo)",`${cadP.reduce((a,r)=>a+(r.te||0),0)} vidas`,"📝"),
+    kH("PME ≥30 vidas",p30.length,"var(--azul)",`${p30.reduce((a,r)=>a+(r.te||0),0)} vidas`,"🏢"),
+  ].join("");
+
+  document.getElementById("gG").innerHTML=AG.map(g=>{
+    const exs=GM[g]||[];
+    const gP=pend.filter(r=>exs.includes(r.ex));
+    const gV=gP.reduce((a,r)=>a+(r.te||0),0);
+    const gA=gP.filter(r=>r.dtV&&new Date(r.dtV)<TD);
+    const gM=gP.filter(r=>r.sm&&String(r.sm).toUpperCase()!=="LIBERADA");
+    const gC=gP.filter(r=>r.sc&&String(r.sc).toUpperCase()!=="CONCLUIDO");
+    let eR=exs.map(e=>{const ep=gP.filter(r=>r.ex===e);const ea=ep.filter(r=>r.dtV&&new Date(r.dtV)<TD);return`<div class="gs"><span class="gl">${e}</span><span class="gv" style="color:${ea.length>0?"var(--vermelho)":"var(--vb)"}">${ep.length} <small style="font-size:10px;color:var(--tS)">(${ea.length} atras.)</small></span></div>`}).join("");
+    return`<div class="gc"><h4 style="color:var(--laranja)">${g}</h4><div class="gs"><span class="gl">Pendências</span><span class="gv" style="color:var(--vermelho)">${gP.length}</span></div><div class="gs"><span class="gl">Vidas</span><span class="gv" style="color:var(--azulLight)">${gV}</span></div><div class="gs"><span class="gl">Atrasadas</span><span class="gv" style="color:var(--laranjaEsc)">${gA.length}</span></div><div class="gs"><span class="gl">Á. Médica</span><span class="gv" style="color:var(--salmao)">${gM.length}</span></div><div class="gs"><span class="gl">Cadastro</span><span class="gv" style="color:var(--amarelo)">${gC.length}</span></div><div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--brd)"><div style="font-size:10px;font-weight:700;color:var(--tS);text-transform:uppercase;margin-bottom:4px">Por Executivo</div>${eR}</div></div>`;
+  }).join("");
+}
+
+// Populate inline filter select, keeping current selection
+function popSel(id,vals){
+  const el=document.getElementById(id);
+  const cur=el.value;
+  const label=el.options[0].textContent;
+  el.innerHTML=`<option value="">${label}</option>`;
+  vals.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v.length>40?v.substring(0,40)+"…":v;if(v===cur)o.selected=true;el.appendChild(o)});
+}
+
+function clearTableFilters(){
+  document.getElementById("sBusca").value="";
+  document.querySelectorAll('.msel-drop input[type=checkbox]').forEach(c=>c.checked=false);
+  document.querySelectorAll('.msel-btn').forEach(b=>{b.classList.remove('has-sel');b.textContent=b.dataset.label||b.textContent});
+  document.getElementById("fCor").value="";
+  document.getElementById("fExe").value="";
+  closeAllMS();
+  render();
+}
+
+// Multi-select helpers
+function toggleMS(id){
+  const drop=document.getElementById(id+"-drop");
+  const wasOpen=drop.classList.contains("open");
+  closeAllMS();
+  if(!wasOpen)drop.classList.add("open");
+}
+function closeAllMS(){document.querySelectorAll(".msel-drop").forEach(d=>d.classList.remove("open"))}
+document.addEventListener("click",function(e){if(!e.target.closest(".msel"))closeAllMS()});
+
+function popMS(id,label,vals){
+  const drop=document.getElementById(id+"-drop");
+  const btn=document.querySelector(`#${id} .msel-btn`);
+  btn.dataset.label=label+" ▾";
+  const counts={};vals.forEach(v=>{counts[v]=(counts[v]||0)+1});
+  const uniq=Object.keys(counts).sort();
+  // Get currently checked values
+  const cur=getMS(id);
+  drop.innerHTML=uniq.map(v=>`<label><input type="checkbox" value="${v}" ${cur.includes(v)?"checked":""} onchange="onMSChange('${id}','${label}')"><span>${v}</span><span class="ms-count">${counts[v]}</span></label>`).join("");
+  // Update button text
+  updateMSBtn(id,label);
+}
+
+function getMS(id){
+  const checks=document.querySelectorAll(`#${id}-drop input[type=checkbox]:checked`);
+  return[...checks].map(c=>c.value);
+}
+
+function onMSChange(id,label){
+  updateMSBtn(id,label);
+  render();
+}
+
+function updateMSBtn(id,label){
+  const sel=getMS(id);
+  const btn=document.querySelector(`#${id} .msel-btn`);
+  if(sel.length===0){btn.textContent=label+" ▾";btn.classList.remove("has-sel")}
+  else if(sel.length===1){btn.textContent=sel[0].length>18?sel[0].slice(0,18)+"…":sel[0];btn.classList.add("has-sel")}
+  else{btn.textContent=`${sel.length} selecionados`;btn.classList.add("has-sel")}
+}
+
+function dcH(l,v,c,s){return`<div class="dc"><div class="dl">${l}</div><div class="dv" style="color:${c}">${v}</div><div class="ds">${s}</div></div>`}
+function kH(l,v,c,s,i){return`<div class="kpi" style="border-left:4px solid ${c}"><div class="ki">${i}</div><div class="kl">${l}</div><div class="kv" style="color:${c};text-shadow:0 0 20px ${c}33">${v}</div><div class="ks">${s}</div></div>`}
+function dbg(d){return`<span class="badge ${d>=5?"b-r":d>=3?"b-y":"b-g"}">${d}d</span>`}
+function sb(s){if(!s)return'<span style="color:var(--tS);font-size:11px">—</span>';const u=String(s).toUpperCase();let c;if(u==="LIBERADA"||u==="CONCLUIDO"||u==="PROCESSADO")c="b-g";else if(u.includes("ANALISE")||u.includes("FILA")||u.includes("INICIADO")||u==="EM DIGITACAO")c="b-y";else if(u==="PENDENTE"||u.includes("DEVOLVID")||u==="REANALISE")c="b-r";else if(u==="CANCELADO")c="b-gr";else c="b-bl";return`<span class="badge ${c}">${u.length>16?u.slice(0,16)+"…":u}</span>`}
+
+// Update corretora dropdown
+function updC(fd){
+  const sc=document.getElementById("sC");
+  const prev=sC;
+  const cors=[...new Set(fd.map(r=>r.cor).filter(c=>c&&c.length>1))].sort();
+  sc.innerHTML='<option value="">Todas Corretoras</option>';
+  cors.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c.length>45?c.substring(0,45)+"…":c;if(c===prev)o.selected=true;sc.appendChild(o)});
+}
+
+// Export current filtered view to Excel
+function exportXLS(){
+  if(!D)return;
+  // Rebuild current filter
+  let fd=D;
+  if(sG&&GM[sG])fd=fd.filter(r=>GM[sG].includes(r.ex));
+  else if(sE)fd=fd.filter(r=>r.ex===sE);
+  if(sC)fd=fd.filter(r=>r.cor===sC);
+
+  const pend=fd;
+  const atras=pend.filter(r=>r.dtV&&new Date(r.dtV)<TD);
+  const dan=pend.filter(r=>{
+    if(!r.dtV)return false;
+    const vigDias=dD(new Date(r.dtV),TD);
+    if(vigDias<0||vigDias>10)return false;
+    const diasParada=Math.max(0,dD(TD,r.dtR));
+    if(diasParada<=3)return false;
+    const med=String(r.sm).toUpperCase();
+    return med!==""&&med!=="LIBERADA";
+  });
+  const mO=pend.filter(r=>String(r.sm).toUpperCase()==="LIBERADA"&&String(r.sc).toUpperCase()!=="CONCLUIDO");
+  const cO=pend.filter(r=>String(r.sc).toUpperCase()==="CONCLUIDO"&&r.sm&&String(r.sm).toUpperCase()!=="LIBERADA");
+  const pme30=pend.filter(r=>(r.te||0)>=30);
+
+  let vL;
+  if(fM==="todos")vL=pend;else if(fM==="atrasadas")vL=atras;else if(fM==="daniel")vL=dan;else if(fM==="medXcad")vL=[...mO,...cO];else if(fM==="pme30")vL=pme30;else vL=pend;
+
+  vL.sort((a,b)=>{const da=a.dtV?new Date(a.dtV).getTime():Infinity;const db=b.dtV?new Date(b.dtV).getTime():Infinity;return da-db});
+
+  // Apply inline table filters too
+  const sBusca=(document.getElementById("sBusca").value||"").toUpperCase().trim();
+  const selSB=getMS("msSB");
+  const selSM=getMS("msSM");
+  const selSC=getMS("msSC");
+  const fCorv=document.getElementById("fCor").value;
+  const fExev=document.getElementById("fExe").value;
+  if(sBusca) vL=vL.filter(r=>(String(r.proposta).includes(sBusca)||String(r.controle).toUpperCase().includes(sBusca)||String(r.emp).toUpperCase().includes(sBusca)));
+  if(selSB.length) vL=vL.filter(r=>selSB.includes(String(r.sb).toUpperCase()));
+  if(selSM.length) vL=vL.filter(r=>selSM.includes(String(r.sm).toUpperCase()));
+  if(selSC.length) vL=vL.filter(r=>selSC.includes(String(r.sc).toUpperCase()));
+  if(fCorv) vL=vL.filter(r=>r.cor===fCorv);
+  if(fExev) vL=vL.filter(r=>r.ex===fExev);
+
+  // Build export data
+  const rows=vL.map(r=>({
+    "Controle":r.controle||"",
+    "Empresa":r.emp||"",
+    "Dt Vigência":r.dtV?fmt(r.dtV):"",
+    "Dias Pendência":Math.max(0,dD(TD,r.dtR)),
+    "Dt Recebimento":r.dtR?fmt(r.dtR):"",
+    "Área Médica":r.sm||"",
+    "Cadastro":r.sc||"",
+    "Status Bitix":r.sb||"",
+    "Vidas":r.te||0,
+    "Tipo Empresa":r.tp||"",
+    "Executivo":r.ex||"",
+    "Gerente":EG[r.ex]||"",
+    "Corretora":r.cor||"",
+    "Operadora":r.op||""
+  }));
+
+  const ws=XLSX.utils.json_to_sheet(rows);
+  // Auto column widths
+  const colW=Object.keys(rows[0]||{}).map(k=>({wch:Math.max(k.length,12)}));
+  ws['!cols']=colW;
+
+  const wb=XLSX.utils.book_new();
+  const filterName=fM==="todos"?"Pendencias":fM==="atrasadas"?"Atrasadas":fM==="daniel"?"AlertaDaniel":fM==="medXcad"?"MedXCad":fM==="pme30"?"PME30":"Pendencias";
+  XLSX.utils.book_append_sheet(wb,ws,filterName);
+
+  const execName=sE||sG||"Todos";
+  const fileName=`Pendencias_${filterName}_${execName.replace(/\s/g,"_")}_${fS(CD).replace("/","")}.xlsx`;
+  XLSX.writeFile(wb,fileName);
+}
+</script>
+</body>
+</html>
