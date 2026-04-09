@@ -1,0 +1,2 @@
+# LeoCRM
+Acompanhamento estratégico
