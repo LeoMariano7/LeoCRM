@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle de Solicitações · Fase 2A</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0a0f1c; --bg2:#111827; --bg3:#1f2937;
+    --fg:#e5e7eb; --fg2:#9ca3af; --fg3:#6b7280;
+    --azul:#0054B8; --azul-c:#00bfff;
+    --laranja:#F5821F; --amarelo:#FDB713; --verde:#39FF14;
+    --vermelho:#EF402F; --roxo:#a855f7;
+    --borda:rgba(0,191,255,.15);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,sans-serif;font-size:13px;line-height:1.4}
+  .fase-bar{background:#1e3a5f;color:#fff;padding:7px 16px;text-align:center;font-weight:600;font-size:11px;letter-spacing:1px}
+  header{background:linear-gradient(135deg,#000921,#1a2847);padding:14px 20px;border-bottom:2px solid var(--laranja);display:flex;align-items:center;gap:16px}
+  .logo{width:36px;height:36px;background:var(--laranja);display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;border-radius:4px}
+  .title{font-family:Orbitron,monospace;letter-spacing:2px;font-size:14px;color:var(--laranja)}
+  .subtitle{font-size:10px;color:var(--fg2);letter-spacing:1px;margin-top:2px}
+  .header-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .user-badge{background:rgba(0,191,255,.1);border:1px solid var(--borda);padding:6px 12px;border-radius:3px;font-size:11px}
+  .btn{background:transparent;border:1px solid var(--azul-c);color:var(--azul-c);padding:8px 14px;cursor:pointer;font-size:11px;letter-spacing:1px;border-radius:3px;font-family:Orbitron,monospace}
+  .btn:hover{background:rgba(0,191,255,.1)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* LOGIN */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center,#0d1a3a 0,#000510 70%)}
+  .login-card{background:#0d1424;border:1px solid var(--laranja);border-radius:6px;padding:32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .login-card h2{font-family:Orbitron,monospace;color:var(--laranja);letter-spacing:2px;font-size:15px;margin-bottom:6px}
+  .login-card .sub{color:var(--fg2);font-size:11px;margin-bottom:24px}
+  .login-card label{display:block;font-size:11px;color:var(--fg2);margin-bottom:4px;letter-spacing:.5px;margin-top:14px}
+  .login-card input{width:100%;background:var(--bg2);border:1px solid var(--borda);color:var(--fg);padding:10px 12px;border-radius:3px;font-size:13px}
+  .login-card input:focus{outline:none;border-color:var(--azul-c)}
+  .login-card button{margin-top:20px;width:100%;background:var(--laranja);color:#000;border:none;padding:11px;border-radius:3px;font-weight:700;letter-spacing:1px;cursor:pointer;font-family:Orbitron,monospace;font-size:12px}
+  .login-card button:hover{filter:brightness(1.1)}
+  .login-card button:disabled{opacity:.5;cursor:not-allowed}
+  .login-erro{background:rgba(239,64,47,.1);border-left:3px solid var(--vermelho);color:var(--vermelho);padding:10px 12px;font-size:11px;margin-top:14px;border-radius:3px;display:none}
+  .login-erro.show{display:block}
+
+  /* ABAS */
+  .tabs{background:#0d1424;border-bottom:1px solid var(--borda);padding:0 20px;display:flex;gap:4px}
+  .tab{padding:12px 18px;cursor:pointer;font-size:12px;letter-spacing:1px;color:var(--fg2);border-bottom:3px solid transparent;font-family:Orbitron,monospace;transition:all .15s}
+  .tab.active{color:var(--laranja);border-bottom-color:var(--laranja);background:rgba(245,130,31,.05)}
+  .tab:hover:not(.active){color:var(--fg);background:rgba(255,255,255,.03)}
+  .tab-badge{background:var(--vermelho);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:6px;font-weight:700}
+  .tab-badge.ok{background:var(--verde);color:#000}
+  .tab-badge.carregando{background:var(--fg3);color:#000}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:16px 20px;background:#0d1424}
+  .kpi{background:linear-gradient(135deg,rgba(0,20,50,.7),rgba(0,5,20,.8));border:1px solid var(--borda);padding:14px;border-radius:3px;position:relative}
+  .kpi-label{font-size:9px;letter-spacing:1.5px;color:var(--fg2);font-family:Orbitron,monospace}
+  .kpi-value{font-size:28px;font-weight:900;font-family:Orbitron,monospace;margin-top:4px}
+  .kpi.total .kpi-value{color:#fff}
+  .kpi.aberto .kpi-value{color:var(--amarelo)}
+  .kpi.sla .kpi-value{color:var(--vermelho)}
+  .kpi.sem-ret .kpi-value{color:var(--laranja)}
+  .kpi.ok .kpi-value{color:var(--verde)}
+  .kpi-sub{font-size:10px;color:var(--fg3);margin-top:2px}
+  .kpi-hist{font-size:9px;color:var(--fg3);position:absolute;top:8px;right:10px}
+
+  .ord-bar{display:flex;align-items:center;gap:14px;padding:10px 20px;background:#0d1424;font-size:11px;color:var(--fg2);flex-wrap:wrap}
+  .ord-bar b{color:var(--fg)}
+  .ord-link{color:var(--azul-c);cursor:pointer;text-decoration:underline}
+
+  .painel-urgente,.painel-alerta{margin:0 20px 10px;border-radius:3px;padding:12px 16px;display:flex;align-items:center;gap:16px}
+  .painel-urgente{background:linear-gradient(90deg,rgba(239,64,47,.1),rgba(239,64,47,.02));border:1px solid rgba(239,64,47,.3);border-left:4px solid var(--vermelho)}
+  .painel-alerta{background:linear-gradient(90deg,rgba(245,130,31,.1),rgba(245,130,31,.02));border:1px solid rgba(245,130,31,.3);border-left:4px solid var(--laranja)}
+  .painel-urgente .ico,.painel-alerta .ico{font-size:22px}
+  .painel-urgente h4{font-size:12px;color:var(--vermelho);letter-spacing:1px;font-family:Orbitron,monospace}
+  .painel-alerta h4{font-size:12px;color:var(--laranja);letter-spacing:1px;font-family:Orbitron,monospace}
+  .painel-urgente p,.painel-alerta p{font-size:11px;color:var(--fg2);margin-top:3px}
+
+  .legenda{padding:10px 20px;background:#0a1020;display:flex;gap:16px;font-size:11px;color:var(--fg2);align-items:center;flex-wrap:wrap}
+  .leg-item{display:flex;align-items:center;gap:6px}
+  .leg-cor{width:14px;height:14px;border-radius:2px}
+  .leg-vermelho{background:rgba(239,64,47,.15);border-left:3px solid var(--vermelho)}
+  .leg-laranja{background:rgba(245,130,31,.1);border-left:3px solid var(--laranja)}
+  .leg-normal{background:rgba(255,255,255,.03);border-left:3px solid var(--fg3)}
+
+  .filtros{padding:12px 20px;background:#0d1424;border-top:1px solid var(--borda);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .search{flex:1;min-width:240px;background:var(--bg2);border:1px solid var(--borda);padding:9px 12px;color:var(--fg);border-radius:3px;font-size:12px}
+  .search:focus{outline:none;border-color:var(--azul-c)}
+  .filtros select,.filtros input[type=date]{background:var(--bg2);border:1px solid var(--borda);padding:9px 12px;color:var(--fg);border-radius:3px;font-size:12px;cursor:pointer}
+
+  .wrap{padding:0 20px 20px;background:#0d1424}
+  .tbl-container{max-height:70vh;overflow-y:auto;background:var(--bg2);border:1px solid var(--borda);border-radius:3px}
+  table{width:100%;border-collapse:collapse}
+  th{background:linear-gradient(135deg,#000921,#1a2847);padding:10px;text-align:left;font-size:10px;letter-spacing:1px;color:var(--laranja);font-family:Orbitron,monospace;border-bottom:2px solid var(--laranja);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;z-index:5}
+  th:hover{background:#1a2847}
+  th .sort{color:var(--azul-c);font-size:9px;margin-left:4px}
+  td{padding:10px;border-bottom:1px solid rgba(0,191,255,.08);font-size:12px;vertical-align:middle}
+  tr{cursor:pointer}
+  tr:hover td{background:rgba(0,191,255,.05)}
+  tr.sla-vencido td{background:rgba(239,64,47,.06);border-left:3px solid transparent}
+  tr.sla-vencido td:first-child{border-left-color:var(--vermelho)}
+  tr.sla-vencido:hover td{background:rgba(239,64,47,.12)}
+  tr.alerta-etapa td{background:rgba(245,130,31,.05);border-left:3px solid transparent}
+  tr.alerta-etapa td:first-child{border-left-color:var(--laranja)}
+  tr.alerta-etapa:hover td{background:rgba(245,130,31,.1)}
+  tr.inconsistente td{background:rgba(253,183,19,.05);border-left:3px solid transparent}
+  tr.inconsistente td:first-child{border-left-color:var(--amarelo)}
+  tr.inconsistente:hover td{background:rgba(253,183,19,.1)}
+
+  .badge{display:inline-block;padding:3px 8px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:.5px;white-space:nowrap}
+  .badge-amarelo{background:rgba(253,183,19,.15);color:var(--amarelo);border:1px solid rgba(253,183,19,.3)}
+  .badge-verde{background:rgba(57,255,20,.1);color:var(--verde);border:1px solid rgba(57,255,20,.3)}
+  .badge-vermelho{background:rgba(239,64,47,.15);color:var(--vermelho);border:1px solid rgba(239,64,47,.3)}
+  .badge-laranja{background:rgba(245,130,31,.15);color:var(--laranja);border:1px solid rgba(245,130,31,.3)}
+  .badge-cinza{background:rgba(156,163,175,.1);color:var(--fg2);border:1px solid rgba(156,163,175,.2)}
+  .badge-ambar{background:rgba(253,183,19,.15);color:var(--amarelo);border:1px solid rgba(253,183,19,.4)}
+
+  .motivo-abertura{color:var(--azul-c)}
+  .motivo-problema{color:var(--amarelo)}
+  .motivo-transf{color:var(--roxo)}
+  .motivo-alt{color:#f59e0b}
+
+  .idade-vermelho{color:var(--vermelho);font-weight:700}
+  .idade-laranja{color:var(--laranja);font-weight:600}
+  .idade-ok{color:var(--fg2)}
+  .prox-acao{font-size:11px;color:var(--azul-c)}
+  .prox-neutro{font-size:11px;color:var(--fg3);font-style:italic}
+  .sem-dado{color:var(--fg3);font-style:italic;font-size:11px}
+
+  /* MODAL */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
+  .overlay.show{display:flex}
+  .modal{background:#0d1424;border:1px solid var(--laranja);border-radius:4px;width:100%;max-width:900px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .modal-head{background:linear-gradient(135deg,#000921,#1a2847);padding:14px 20px;border-bottom:2px solid var(--laranja);display:flex;align-items:center;justify-content:space-between}
+  .modal-head h3{font-family:Orbitron,monospace;font-size:13px;letter-spacing:1.5px;color:var(--laranja)}
+  .modal-head .close{background:none;border:none;color:var(--fg);font-size:22px;cursor:pointer;padding:0 8px}
+  .modal-body{padding:20px}
+  .section{background:var(--bg2);border:1px solid var(--borda);border-radius:3px;padding:14px 16px;margin-bottom:14px}
+  .section-title{font-family:Orbitron,monospace;font-size:10px;letter-spacing:1.5px;color:var(--azul-c);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--borda)}
+  .section-title.laranja{color:var(--laranja)}
+  .section-title.verde{color:var(--verde)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px}
+  .field{display:flex;gap:8px;align-items:baseline;padding:4px 0}
+  .field-label{color:var(--fg2);font-size:11px;min-width:110px}
+  .field-value{color:var(--fg);font-weight:500;font-size:12px}
+  .metricas{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .metrica{background:var(--bg2);border:1px solid var(--borda);border-radius:3px;padding:10px 12px}
+  .metrica-label{font-size:9px;color:var(--fg3);letter-spacing:1px;font-family:Orbitron,monospace}
+  .metrica-value{font-size:17px;font-weight:700;margin-top:3px}
+  .metrica-sub{font-size:9px;color:var(--fg3);margin-top:2px}
+  .sla-box{display:flex;gap:12px;align-items:center;padding:10px 12px;background:var(--bg3);border-radius:3px}
+  .sla-ok{border-left:3px solid var(--verde)}
+  .sla-warn{border-left:3px solid var(--vermelho)}
+  .sla-neutro{border-left:3px solid var(--fg3)}
+  .timeline{position:relative;padding-left:24px}
+  .timeline::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:rgba(0,191,255,.2)}
+  .step{position:relative;padding:8px 0 8px 6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .step::before{content:"";position:absolute;left:-21px;top:12px;width:16px;height:16px;border-radius:50%;background:var(--bg3);border:2px solid var(--fg3)}
+  .step.done::before{background:var(--verde);border-color:var(--verde)}
+  .step.current::before{background:var(--laranja);border-color:var(--laranja);box-shadow:0 0 0 4px rgba(245,130,31,.2)}
+  .step-nome{font-size:12px;min-width:220px}
+  .step.done .step-nome{color:var(--verde)}
+  .step.current .step-nome{color:var(--laranja);font-weight:600}
+  .step.pend .step-nome{color:var(--fg3)}
+  .step-data{font-size:11px;color:var(--fg2);font-family:monospace}
+  .step-status{font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px}
+  .step-dias{font-size:10px;color:var(--laranja);background:rgba(245,130,31,.1);padding:2px 7px;border-radius:10px}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{padding:4px 10px;border-radius:12px;font-size:10px;background:var(--bg3);color:var(--fg2);border:1px solid var(--borda)}
+  .alert{background:rgba(253,183,19,.08);border-left:3px solid var(--amarelo);padding:10px 12px;border-radius:3px;margin:10px 0;font-size:11px;color:var(--amarelo)}
+  .alert.ok{background:rgba(57,255,20,.06);border-left-color:var(--verde);color:var(--verde)}
+  .alert.laranja{background:rgba(245,130,31,.08);border-left-color:var(--laranja);color:var(--laranja)}
+  .alert.info{background:rgba(0,191,255,.06);border-left-color:var(--azul-c);color:var(--azul-c)}
+  .alert.vermelho{background:rgba(239,64,47,.08);border-left-color:var(--vermelho);color:var(--vermelho)}
+  .hint{font-size:10px;color:var(--fg3);margin-top:4px}
+  .footer{padding:12px 20px;background:var(--bg2);border-top:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center}
+  .footer-info{font-size:11px;color:var(--fg2)}
+
+  .pane{display:none}
+  .pane.active{display:block}
+  .loading{padding:40px;text-align:center;color:var(--fg2)}
+  .loading .spin{display:inline-block;width:28px;height:28px;border:3px solid var(--borda);border-top-color:var(--laranja);border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .input-ro{background:var(--bg3);border:1px solid var(--borda);color:var(--fg2);padding:7px 10px;border-radius:3px;font-size:12px;cursor:not-allowed}
+  .diagnostico-badge{background:rgba(0,191,255,.1);color:var(--azul-c);font-size:9px;padding:3px 8px;border-radius:10px;border:1px solid var(--borda);margin-left:8px}
+  .nota-fase{margin:10px 20px;background:rgba(0,191,255,.05);border:1px dashed var(--azul-c);border-radius:3px;padding:10px 14px;font-size:11px;color:var(--azul-c)}
+
+  /* ================================================================
+     VISÃO PARA PARCEIROS — visual clean, documento executivo
+     Paleta separada: fundo claro, azul-marinho e azul como principais
+     ================================================================ */
+  .parceiro-wrap{background:#eef2f7;padding:20px 24px;min-height:60vh}
+  .parceiro-controles{background:#fff;border:1px solid #d6dde8;border-radius:8px;padding:18px 22px;margin-bottom:20px;
+    display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;color:#1a2847;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+  .parceiro-controles label{display:block;font-size:11px;color:#4a5568;letter-spacing:.3px;margin-bottom:5px;font-weight:600}
+  .parceiro-controles select,.parceiro-controles input[type=date]{
+    background:#fff;border:1px solid #cbd5e0;border-radius:5px;padding:9px 12px;font-size:13px;color:#1a2847;min-width:180px;font-family:inherit}
+  .parceiro-controles select:focus,.parceiro-controles input[type=date]:focus{outline:none;border-color:#0054B8;box-shadow:0 0 0 2px rgba(0,84,184,.15)}
+  .parceiro-btn{background:#1a2847;color:#fff;border:none;padding:10px 18px;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.3px;font-family:inherit}
+  .parceiro-btn:hover{background:#0d1a35}
+  .parceiro-btn.secundario{background:#fff;color:#1a2847;border:1px solid #1a2847}
+  .parceiro-btn.secundario:hover{background:#f7f9fc}
+  .parceiro-btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* O relatório propriamente dito */
+  .parceiro-relatorio{background:#fff;border:1px solid #d6dde8;border-radius:8px;padding:36px 42px;color:#1a2847;
+    font-family:system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.5;font-size:13px}
+  .parceiro-vazio{color:#718096;text-align:center;padding:60px 20px;font-size:14px;font-style:italic}
+  .parceiro-cabecalho{border-bottom:3px solid #1a2847;padding-bottom:16px;margin-bottom:24px}
+  .parceiro-cabecalho h1{font-size:22px;color:#1a2847;letter-spacing:-.3px;margin-bottom:4px;font-weight:700}
+  .parceiro-cabecalho .meta{color:#4a5568;font-size:12px}
+  .parceiro-cabecalho .meta b{color:#1a2847}
+
+  .parceiro-secao{margin:28px 0}
+  .parceiro-secao-titulo{font-size:11px;letter-spacing:1.5px;color:#1a2847;text-transform:uppercase;font-weight:700;margin-bottom:14px;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+
+  /* Cards de indicadores — discretos */
+  .parceiro-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .parceiro-kpi{background:#f7f9fc;border:1px solid #d6dde8;border-left:3px solid #0054B8;border-radius:4px;padding:14px 16px}
+  .parceiro-kpi.alerta{border-left-color:#F5821F}
+  .parceiro-kpi.critico{border-left-color:#C53030}
+  .parceiro-kpi.ok{border-left-color:#1a7f4a}
+  .parceiro-kpi-label{font-size:10px;color:#718096;letter-spacing:.5px;text-transform:uppercase;font-weight:600}
+  .parceiro-kpi-valor{font-size:26px;font-weight:700;color:#1a2847;margin-top:4px;line-height:1.1}
+  .parceiro-kpi.critico .parceiro-kpi-valor{color:#C53030}
+  .parceiro-kpi.alerta .parceiro-kpi-valor{color:#F5821F}
+  .parceiro-kpi-sub{font-size:11px;color:#718096;margin-top:4px}
+  .parceiro-kpi-sem-dados{font-size:14px;font-weight:600;color:#718096;margin-top:6px;font-style:italic}
+
+  /* Mais antiga */
+  .parceiro-destaque{background:#fef5ed;border:1px solid #f5d5b7;border-left:4px solid #F5821F;border-radius:4px;padding:16px 20px;color:#1a2847}
+  .parceiro-destaque h4{font-size:11px;letter-spacing:1px;color:#8b4513;margin-bottom:6px;text-transform:uppercase}
+  .parceiro-destaque .linha{font-size:14px;color:#1a2847}
+  .parceiro-destaque .linha b{color:#1a2847}
+
+  /* Distribuição por etapa — barras simples */
+  .parceiro-etapas{display:flex;flex-direction:column;gap:8px}
+  .parceiro-etapa{display:flex;align-items:center;gap:12px;padding:6px 0}
+  .parceiro-etapa-nome{min-width:200px;font-size:12px;color:#1a2847}
+  .parceiro-etapa-barra{flex:1;height:16px;background:#f0f3f8;border-radius:8px;overflow:hidden;position:relative}
+  .parceiro-etapa-fill{height:100%;background:linear-gradient(90deg,#0054B8,#1a2847);border-radius:8px}
+  .parceiro-etapa-qtd{min-width:40px;text-align:right;font-weight:600;color:#1a2847;font-size:13px}
+
+  /* Tabela clean */
+  .parceiro-tabela{width:100%;border-collapse:collapse;font-size:12px;color:#1a2847}
+  .parceiro-tabela th{text-align:left;padding:10px 12px;background:#f7f9fc;border-bottom:2px solid #cbd5e0;font-weight:600;font-size:11px;letter-spacing:.3px;color:#4a5568;text-transform:uppercase}
+  .parceiro-tabela td{padding:11px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+  .parceiro-tabela tr:nth-child(even) td{background:#fafbfd}
+  .p-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:.3px}
+  .p-badge.critico{background:#fde8e8;color:#C53030;border:1px solid #f5c7c7}
+  .p-badge.alerta{background:#fef5ed;color:#8b4513;border:1px solid #f5d5b7}
+  .p-badge.ok{background:#e8f5ec;color:#1a7f4a;border:1px solid #c3e3cf}
+  .p-badge.neutro{background:#f0f3f8;color:#4a5568;border:1px solid #d6dde8}
+  .p-prox-acao{color:#0054B8;font-weight:500}
+  .p-prox-neutro{color:#718096;font-style:italic;font-weight:400}
+
+  .parceiro-rodape{margin-top:30px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#718096;line-height:1.6}
+  .parceiro-rodape b{color:#1a2847}
+
+  /* Modo impressão: só o relatório, sem menus/botões/painéis internos */
+  @media print {
+    body{background:#fff !important}
+    .mock-bar,.fase-bar,header,.tabs,#appWrap > div:not(.pane),
+    .parceiro-controles,.parceiro-wrap{background:#fff !important;padding:0 !important;margin:0 !important}
+    .mock-bar,.fase-bar,header,.tabs,.parceiro-controles,
+    #pane-fila,#pane-hist,
+    #ultimaAtualizacao,#btnAtualizar{display:none !important}
+    .parceiro-relatorio{border:none !important;padding:0 !important;color:#000 !important;font-size:12px}
+    .parceiro-cabecalho{page-break-after:avoid}
+    .parceiro-secao{page-break-inside:avoid}
+    .parceiro-tabela{page-break-inside:auto}
+    .parceiro-tabela tr{page-break-inside:avoid}
+    .parceiro-kpi{background:#fff !important;border:1px solid #999 !important;border-left:3px solid #000 !important}
+    .parceiro-kpi-valor{color:#000 !important}
+    @page{size:A4;margin:15mm}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============== LOGIN ============== -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h2>🎫 CONTROLE DE SOLICITAÇÕES</h2>
+    <div class="sub">Autenticação necessária · Fase 2A diagnóstico</div>
+    <label>E-mail</label>
+    <input type="email" id="loginEmail" placeholder="seu.email@hapvida.com.br" autocomplete="email">
+    <label>Senha</label>
+    <input type="password" id="loginSenha" placeholder="••••••••" autocomplete="current-password">
+    <button id="btnLogin" onclick="fazerLogin()">ENTRAR</button>
+    <div class="login-erro" id="loginErro"></div>
+    <div class="hint" style="margin-top:14px;text-align:center">Login via Firebase · Hapvida Comercial SP</div>
+  </div>
+</div>
+
+<!-- ============== APP ============== -->
+<div id="appWrap" style="display:none">
+
+<div class="fase-bar">🔎 FASE 2A · DIAGNÓSTICO SOMENTE LEITURA · Sem gravação, sem sincronização, sem alteração da planilha</div>
+
+<header>
+  <div class="logo">H</div>
+  <div>
+    <div class="title">🎫 CONTROLE DE SOLICITAÇÕES</div>
+    <div class="subtitle">HAPVIDA · GERÊNCIA COMERCIAL SP · FILA COMPARTILHADA</div>
+  </div>
+  <div class="header-right">
+    <span class="user-badge">👤 <span id="userNome">—</span> · <b id="userRole" style="color:var(--azul-c)">—</b></span>
+    <span class="user-badge" id="ultimaAtualizacao" title="Última leitura bem-sucedida do backend">⟳ carregando...</span>
+    <button class="btn" id="btnAtualizar" onclick="recarregar()">⟳ Atualizar agora</button>
+    <button class="btn" onclick="voltar()">← Portal</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab('fila',this)">📋 FILA ATIVA <span class="tab-badge carregando" id="badgeFila">…</span></div>
+  <div class="tab" onclick="setTab('hist',this)">📁 HISTÓRICO DE REGULARIZADAS <span class="tab-badge ok" id="badgeHist">0</span></div>
+  <div class="tab" onclick="setTab('parceiros',this)">🤝 VISÃO PARA PARCEIROS</div>
+</div>
+
+<!-- =================== FILA ATIVA =================== -->
+<div class="pane active" id="pane-fila">
+<div id="filaConteudo">
+  <div class="loading"><div class="spin"></div><p style="margin-top:14px">Carregando solicitações…</p></div>
+</div>
+</div>
+
+<!-- =================== HISTÓRICO =================== -->
+<div class="pane" id="pane-hist">
+<div id="histConteudo">
+  <div class="loading"><p>Clique na aba para carregar o histórico.</p></div>
+</div>
+</div>
+
+<!-- =================== VISÃO PARA PARCEIROS =================== -->
+<div class="pane" id="pane-parceiros">
+<div class="parceiro-wrap">
+  <div class="parceiro-controles">
+    <div>
+      <label>Tipo de visão</label>
+      <select id="parcTipo">
+        <option value="assessoria">Assessoria (coluna F)</option>
+        <option value="corretora">Corretora (coluna G)</option>
+      </select>
+    </div>
+    <div>
+      <label id="parcEntidadeLabel">Assessoria</label>
+      <select id="parcEntidade" style="min-width:260px">
+        <option value="">— selecione uma assessoria —</option>
+      </select>
+    </div>
+    <div>
+      <label>Período (regularizações e tempo médio)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="parcPeriodoDe" title="Período inicial">
+        <span style="color:#718096">a</span>
+        <input type="date" id="parcPeriodoAte" title="Período final">
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <button class="parceiro-btn" id="parcGerar" onclick="gerarRelatorioParceiros()">📊 Gerar / Atualizar</button>
+    <button class="parceiro-btn secundario" id="parcPdf" onclick="imprimirRelatorio()" disabled>⬇ Baixar PDF</button>
+    <button class="parceiro-btn secundario" id="parcWpp" onclick="copiarWhatsApp()" disabled>📱 Copiar WhatsApp</button>
+  </div>
+
+  <div class="parceiro-relatorio" id="parcRelatorio">
+    <div class="parceiro-vazio">
+      Selecione o tipo de visão e a entidade, depois clique em <b>Gerar / Atualizar</b> para montar o relatório.
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- =================== MODAL =================== -->
+<div class="overlay" id="modalOverlay">
+<div class="modal">
+<div class="modal-head">
+  <h3 id="modalTitulo">—</h3>
+  <button class="close" onclick="fecharModal()">✕</button>
+</div>
+<div class="modal-body" id="modalBody"></div>
+<div class="footer">
+  <div class="footer-info">🔎 Fase diagnóstico · nenhuma edição salva na planilha</div>
+  <button class="btn" onclick="fecharModal()">Fechar</button>
+</div>
+</div>
+</div>
+
+</div><!-- /appWrap -->
+
+<script>
+'use strict';
+
+// ============================================================================
+// CONFIGURAÇÃO
+// ============================================================================
+const FIREBASE_API_KEY = 'AIzaSyDCUvDaQ3ywukPz7PB9Vw7NQGQbn40CW34';
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbysQLV4Vq_kpwH80CIEv0kjHjZWXThSTxl7ylrqysnZMNvu7Gqn6ouKCnNtcPDZfrTvKQ/exec';
+const PORTAL_URL = 'https://dashboardosmelhores.com.br/';
+
+// SLA OFICIAL: 1 dia útil para retorno ao corretor (coluna J)
+const SLA_RETORNO_DUS = 1;
+// Alerta de acompanhamento: etapa parada há > N dias úteis (SEM prazo oficial)
+const ALERTA_ACOMP_DUS = 5;
+
+// ============================================================================
+// ESTADO
+// ============================================================================
+let TOKEN = null;
+let USUARIO = null;
+let TODAS_SOLICITACOES = [];
+let FERIADOS_SET = new Set();   // 'YYYY-MM-DD'
+let ORDENACAO = { campo:'dataAbertura', direcao:'asc' };
+// Filtros persistem entre refreshes. Valores especiais do dropdown de assessoria:
+//   ''     = todas
+//   '__SEM__' = somente solicitações com assessoria vazia na coluna F
+let FILTRO = {
+  texto:'', motivo:'', etapa:'', sla:'', alerta:'', assessoria:'',
+  periodoDe:'', periodoAte:''
+};
+// Filtros do histórico (independentes dos da fila ativa)
+let FILTRO_HIST = {
+  texto:'', motivo:'', assessoria:'',
+  aberturaDe:'', aberturaAte:'',
+  regularDe:'', regularAte:''
+};
+let HOJE = null;
+let ULTIMA_ATUALIZACAO = null;  // Date do último listar bem-sucedido
+let AUTO_REFRESH_TIMER = null;  // handle do setInterval
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+let CARREGANDO = false;         // trava pra não executar duas atualizações concorrentes
+let MODAL_ABERTO = false;       // pausa auto-refresh enquanto modal estiver aberto
+
+// ============================================================================
+// LOGIN FIREBASE
+// ============================================================================
+async function fazerLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  const erro  = document.getElementById('loginErro');
+  const btn   = document.getElementById('btnLogin');
+  erro.classList.remove('show');
+  if(!email || !senha){ erro.textContent='Preencha e-mail e senha.'; erro.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = 'AUTENTICANDO…';
+  try{
+    const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+FIREBASE_API_KEY, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: senha, returnSecureToken: true })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.idToken) {
+      const msg = (d.error && d.error.message) || 'Falha na autenticação.';
+      throw new Error(amigavel(msg));
+    }
+    TOKEN = d.idToken;
+    sessionStorage.setItem('csol_token', TOKEN);
+    await inicializarApp();
+  } catch(e){
+    erro.textContent = e.message || 'Erro ao autenticar.';
+    erro.classList.add('show');
+    btn.disabled = false; btn.textContent = 'ENTRAR';
+  }
+}
+function amigavel(msg){
+  if (msg.indexOf('EMAIL_NOT_FOUND') >= 0) return 'E-mail não cadastrado.';
+  if (msg.indexOf('INVALID_PASSWORD') >= 0 || msg.indexOf('INVALID_LOGIN_CREDENTIALS') >= 0) return 'E-mail ou senha inválidos.';
+  if (msg.indexOf('USER_DISABLED') >= 0) return 'Usuário desativado. Fale com o Léo.';
+  if (msg.indexOf('TOO_MANY_ATTEMPTS') >= 0) return 'Muitas tentativas. Aguarde alguns minutos.';
+  return msg;
+}
+
+// ============================================================================
+// CHAMADA AO BACKEND
+// ============================================================================
+async function chamarBackend(acao, extras){
+  const body = Object.assign({ acao, token: TOKEN }, extras || {});
+  const r = await fetch(BACKEND_URL, {
+    method:'POST',
+    // text/plain evita preflight CORS no Apps Script
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.erro || 'Erro no backend.');
+  return d;
+}
+
+// ============================================================================
+// INICIALIZAÇÃO
+// ============================================================================
+async function inicializarApp(){
+  try {
+    const resp = await chamarBackend('whoami');
+    USUARIO = resp.usuario;
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('appWrap').style.display='block';
+    document.getElementById('userNome').textContent = USUARIO.nome || USUARIO.email;
+    document.getElementById('userRole').textContent = (USUARIO.role||'').toLowerCase();
+    await carregarDados();
+    iniciarAutoRefresh();  // começa só depois do primeiro carregamento OK
+  } catch(e){
+    const erro = document.getElementById('loginErro');
+    erro.textContent = 'Login OK, mas o backend recusou: ' + e.message;
+    erro.classList.add('show');
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = false; btn.textContent = 'ENTRAR';
+  }
+}
+
+// Carrega dados da planilha. SILENT=true indica refresh automático (não limpa tela em erro).
+// Nunca executa duas atualizações concorrentes. Preserva últimos dados em caso de erro.
+async function carregarDados(silent){
+  if (CARREGANDO) return;              // trava: não concorrente
+  CARREGANDO = true;
+  marcarBotaoAtualizando(true);
+  // Spinner apenas no primeiro carregamento (quando não há dados ainda)
+  const primeiroCarregamento = TODAS_SOLICITACOES.length === 0;
+  if (primeiroCarregamento) {
+    document.getElementById('filaConteudo').innerHTML =
+      '<div class="loading"><div class="spin"></div><p style="margin-top:14px">Carregando solicitações…</p></div>';
+  }
+  try {
+    const resp = await chamarBackend('listar');
+    const novas = resp.solicitacoes || [];
+    const novoHoje = new Date();
+    const novoHojeMeiaNoite = new Date(novoHoje.getFullYear(), novoHoje.getMonth(), novoHoje.getDate());
+    const novoFeriados = new Set();
+    (resp.feriados || []).forEach(f => {
+      const d = parseData(f);
+      if (d) novoFeriados.add(formatarYMD(d));
+    });
+    // Só substitui estado DEPOIS que a leitura concluiu sem erro
+    TODAS_SOLICITACOES = novas;
+    HOJE = novoHojeMeiaNoite;
+    FERIADOS_SET = novoFeriados;
+    TODAS_SOLICITACOES.forEach(preCalcular);
+    ULTIMA_ATUALIZACAO = novoHoje;
+    atualizarLabelUltimaAtualizacao();
+    renderFila();
+    // Se a aba histórico está ativa, re-renderiza também
+    const abaAtiva = document.querySelector('.tab.active');
+    if (abaAtiva && abaAtiva.textContent.indexOf('HISTÓRICO') >= 0) renderHistorico();
+    if (abaAtiva && abaAtiva.textContent.indexOf('PARCEIROS') >= 0) inicializarParceiros();
+  } catch(e){
+    if (primeiroCarregamento) {
+      // Nenhum dado em tela ainda: mostra tela de erro
+      document.getElementById('filaConteudo').innerHTML =
+        '<div class="loading" style="color:var(--vermelho)"><p>Erro ao carregar: '+esc(e.message)+'</p><button class="btn" style="margin-top:14px" onclick="carregarDados()">Tentar novamente</button></div>';
+    } else {
+      // Tela tem dados: mantém e só avisa no label
+      mostrarErroDiscreto(e.message);
+    }
+  } finally {
+    CARREGANDO = false;
+    marcarBotaoAtualizando(false);
+  }
+}
+
+function marcarBotaoAtualizando(ativo){
+  const btn = document.getElementById('btnAtualizar');
+  if (!btn) return;
+  btn.disabled = ativo;
+  btn.textContent = ativo ? '⟳ atualizando...' : '⟳ Atualizar agora';
+}
+
+function atualizarLabelUltimaAtualizacao(){
+  const el = document.getElementById('ultimaAtualizacao');
+  if (!el || !ULTIMA_ATUALIZACAO) return;
+  const hh = ('0'+ULTIMA_ATUALIZACAO.getHours()).slice(-2);
+  const mm = ('0'+ULTIMA_ATUALIZACAO.getMinutes()).slice(-2);
+  const ss = ('0'+ULTIMA_ATUALIZACAO.getSeconds()).slice(-2);
+  el.textContent = '✓ Atualizado às ' + hh + ':' + mm + ':' + ss;
+  el.style.color = '';
+  el.title = 'Última leitura bem-sucedida: ' + ULTIMA_ATUALIZACAO.toLocaleString('pt-BR');
+}
+
+function mostrarErroDiscreto(msg){
+  const el = document.getElementById('ultimaAtualizacao');
+  if (!el) return;
+  const base = ULTIMA_ATUALIZACAO ? ('última OK: ' + ('0'+ULTIMA_ATUALIZACAO.getHours()).slice(-2) + ':' + ('0'+ULTIMA_ATUALIZACAO.getMinutes()).slice(-2)) : '';
+  el.innerHTML = '⚠ falha atualizar · ' + esc(base);
+  el.style.color = 'var(--vermelho)';
+  el.title = 'Erro: ' + msg + ' · Dados mostrados são da última leitura OK';
+}
+
+async function recarregar(){ await carregarDados(false); }
+function voltar(){ window.location.href = PORTAL_URL; }
+
+// Auto-refresh a cada 5 min. Pula ciclo quando modal está aberto.
+function iniciarAutoRefresh(){
+  if (AUTO_REFRESH_TIMER) return;
+  AUTO_REFRESH_TIMER = setInterval(() => {
+    if (MODAL_ABERTO) return;    // pausa durante edição no modal
+    if (CARREGANDO) return;      // já atualizando
+    carregarDados(true);
+  }, AUTO_REFRESH_MS);
+}
+function pararAutoRefresh(){
+  if (AUTO_REFRESH_TIMER) { clearInterval(AUTO_REFRESH_TIMER); AUTO_REFRESH_TIMER = null; }
+}
+
+// ============================================================================
+// DIAS ÚTEIS (feriados vêm da aba FERIADOS)
+// ============================================================================
+function parseData(valor){
+  // Backend formata datas como "yyyy-MM-dd HH:mm:ss" ou texto puro
+  if (!valor) return null;
+  const s = String(valor).trim();
+  if (!s) return null;
+  // yyyy-MM-dd (com ou sem hora)
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  // dd/MM/yyyy
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  // ISO fallback
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return null;
+}
+function formatarYMD(d){
+  const y=d.getFullYear(), m=('0'+(d.getMonth()+1)).slice(-2), dia=('0'+d.getDate()).slice(-2);
+  return y+'-'+m+'-'+dia;
+}
+function formatarBR(d){
+  if (!d) return '—';
+  const dia=('0'+d.getDate()).slice(-2), m=('0'+(d.getMonth()+1)).slice(-2), y=d.getFullYear();
+  return dia+'/'+m+'/'+y;
+}
+function diaSemanaBR(d){
+  return ['dom','seg','ter','qua','qui','sex','sáb'][d.getDay()];
+}
+// Dias úteis decorridos APÓS a data de abertura até hoje (não conta o dia da abertura)
+function diasUteisApos(dAbertura, dFim){
+  if (!dAbertura || !dFim) return 0;
+  if (dFim <= dAbertura) return 0;
+  let d = new Date(dAbertura);
+  d.setDate(d.getDate()+1);
+  let count = 0;
+  while (d <= dFim) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6 && !FERIADOS_SET.has(formatarYMD(d))) count++;
+    d.setDate(d.getDate()+1);
+  }
+  return count;
+}
+
+// ============================================================================
+// NEGÓCIO: ler colunas por letra
+// ============================================================================
+// A=Data Abertura, B=Nome, C=Telefone, D=Motivo, E=Canal, F=Assessoria,
+// G=Corretora, H=LECOM, I=Assunto, J=Retorno Corretor, K=Chamado SF (texto),
+// L=Data Abertura SF, M=Aprovação Sênior, N=Aprovação Diretoria, O=Cadastro,
+// P=Link Contrato, Q=Volta Cadastro, R=Form Risco, S=Compliance,
+// T=Comissionamento, U=Liberação Código, V=Data Regularização,
+// W=Etapa Atual (fórmula), Z=Status, AD=ID
+const COLS = {
+  A:'A', B:'B', C:'C', D:'D', E:'E', F:'F', G:'G', H:'H', I:'I',
+  J:'J', K:'K', L:'L',
+  M:'M', N:'N', O:'O', P:'P', Q:'Q', R:'R', S:'S', T:'T', U:'U',
+  V:'V', W:'W', Z:'Z'
+};
+const ETAPAS_ABERTURA = [
+  { key:'M', nome:'1. Aprovação Sênior' },
+  { key:'N', nome:'2. Aprovação Diretoria' },
+  { key:'O', nome:'3. Cadastro' },
+  { key:'P', nome:'4. Link do Contrato' },
+  { key:'Q', nome:'5. Volta do Cadastro' },
+  { key:'R', nome:'6. Formulário de Risco' },
+  { key:'S', nome:'7. Compliance' },
+  { key:'T', nome:'8. Comissionamento' },
+  { key:'U', nome:'9. Liberação do Código' },
+  { key:'V', nome:'10. Data da Regularização' }
+];
+
+function obterMotivo(sol){
+  const m = String(sol[COLS.D]||'').trim();
+  return m || '—';
+}
+function classeMotivo(m){
+  const low = m.toLowerCase();
+  if (low.indexOf('abertura') >= 0) return 'motivo-abertura';
+  if (low.indexOf('problema') >= 0 && low.indexOf('comiss') >= 0) return 'motivo-problema';
+  if (low.indexOf('transfer') >= 0) return 'motivo-transf';
+  if (low.indexOf('altera') >= 0) return 'motivo-alt';
+  return '';
+}
+function ehAberturaDeCodigo(sol){
+  return obterMotivo(sol).toLowerCase().indexOf('abertura') >= 0;
+}
+
+// Última data real entre as colunas de evento (NUNCA K, que é texto)
+function ultimaMovimentacao(sol){
+  const COLS_EVENTO = ['J','L','M','N','O','P','Q','R','S','T','U','V'];
+  const COLS_LABEL  = {
+    J:'Retorno ao corretor', L:'Chamado SF registrado',
+    M:'Aprovação Sênior', N:'Aprovação Diretoria', O:'Cadastro',
+    P:'Link do Contrato', Q:'Volta do Cadastro', R:'Form. Risco',
+    S:'Compliance', T:'Comissionamento', U:'Liberação do Código',
+    V:'Regularização registrada'
+  };
+  let maior=null, rotulo=null;
+  for (const c of COLS_EVENTO){
+    const d = parseData(sol[c]);
+    if (d && (!maior || d > maior)) { maior = d; rotulo = COLS_LABEL[c]; }
+  }
+  return maior ? { data:maior, rotulo } : null;
+}
+
+// Primeira etapa pendente (= etapa atual quando sol não está regularizada)
+function etapaAtualAbertura(sol){
+  for (const et of ETAPAS_ABERTURA){
+    if (!parseData(sol[et.key])) return et;
+  }
+  return null; // todas preenchidas
+}
+function etapaAnteriorConcluida(sol){
+  let anterior = null;
+  for (const et of ETAPAS_ABERTURA){
+    const d = parseData(sol[et.key]);
+    if (!d) return anterior;
+    anterior = { etapa: et, data: d };
+  }
+  return anterior;
+}
+
+// Pré-calcular tudo que o render usa (uma vez por solicitação)
+function preCalcular(sol){
+  const dAb = parseData(sol[COLS.A]);
+  const dRet = parseData(sol[COLS.J]);
+  const dReg = parseData(sol[COLS.V]);
+  const statusZ = String(sol[COLS.Z]||'').trim();
+
+  sol._dAbertura = dAb;
+  sol._dRetorno  = dRet;
+  sol._dRegul    = dReg;
+  sol._statusZ   = statusZ;
+  // Regra: só é solicitação real quando a coluna A tem data válida.
+  // Linhas sem data em A são lixo estrutural (ex: linhas 20-119 em branco) e
+  // NÃO devem ser exibidas em Fila nem em Histórico.
+  sol._valida    = !!dAb;
+
+  // Tempo total
+  if (dAb) {
+    sol._tempoTotal = dReg ? diasUteisApos(dAb, dReg) : diasUteisApos(dAb, HOJE);
+  } else {
+    sol._tempoTotal = null;
+  }
+
+  // Última movimentação
+  sol._ultMov = ultimaMovimentacao(sol);
+
+  // Consistência Z/V — regras oficiais
+  // Z vazio       + V vazio       -> em_aberto (UI mostra "Em Aberto" sem gravar)
+  // Z = "Em Aberto" + V vazio     -> em_aberto (status explícito)
+  // Z = "Regularizado" + V preenchido -> regularizada
+  // Z = "Regularizado" + V vazio  -> inconsistente_reg_sem_data
+  // Z vazio       + V preenchido  -> inconsistente_v_sem_status ("Regularização registrada - confirmar Status")
+  // Z = "Em Aberto" + V preenchido -> inconsistente_z_aberto_com_v (nova regra)
+  // Nenhum desses casos altera a planilha automaticamente.
+  let consistencia;
+  if (statusZ === 'Regularizado' && dReg)            consistencia = 'regularizada';
+  else if (statusZ === 'Regularizado' && !dReg)      consistencia = 'inconsistente_reg_sem_data';
+  else if (statusZ === 'Em Aberto'    && dReg)       consistencia = 'inconsistente_z_aberto_com_v';
+  else if (!statusZ && dReg)                         consistencia = 'inconsistente_v_sem_status';
+  else                                               consistencia = 'em_aberto';
+  sol._consistencia = consistencia;
+  // Helper: é QUALQUER tipo de inconsistência?
+  sol._inconsistente = (consistencia === 'inconsistente_reg_sem_data'
+                     || consistencia === 'inconsistente_v_sem_status'
+                     || consistencia === 'inconsistente_z_aberto_com_v');
+
+  // Etapa atual
+  if (ehAberturaDeCodigo(sol)) {
+    const et = etapaAtualAbertura(sol);
+    sol._etapaAtual = et ? et.nome : (dReg ? 'Regularizada' : 'Aguardando resolução');
+    // Dias na etapa: do início da etapa atual até hoje (ou V se regularizada)
+    const anterior = etapaAnteriorConcluida(sol);
+    const inicioEtapa = anterior ? anterior.data : dAb;
+    const fim = dReg || HOJE;
+    sol._diasNaEtapa = inicioEtapa ? diasUteisApos(inicioEtapa, fim) : null;
+  } else {
+    // Fluxo simples (SF)
+    const dSF = parseData(sol[COLS.L]);
+    if (dReg) sol._etapaAtual = 'Regularizada';
+    else if (dSF) sol._etapaAtual = 'Aguardando resolução';
+    else sol._etapaAtual = 'Solicitação recebida';
+    const inicioEtapa = dSF || dAb;
+    const fim = dReg || HOJE;
+    sol._diasNaEtapa = inicioEtapa ? diasUteisApos(inicioEtapa, fim) : null;
+  }
+
+  // SLA de retorno: 1 d.u. após abertura
+  // Status: no_prazo (sem retorno ainda, mas dentro de 1 d.u.) | vencido_pendente | retornado_ok | retornado_atraso | sem_abertura
+  if (!dAb) {
+    sol._sla = { estado:'sem_data', texto:'Sem data de abertura', atraso:0 };
+  } else if (dRet) {
+    const atraso = diasUteisApos(dAb, dRet) - SLA_RETORNO_DUS;
+    if (atraso <= 0) sol._sla = { estado:'retornado_ok', texto:'Retornado · OK', atraso:0 };
+    else sol._sla = { estado:'retornado_atraso', texto:'Retornado · '+atraso+' d.u. de atraso', atraso };
+  } else {
+    const decorridos = diasUteisApos(dAb, HOJE);
+    const atraso = decorridos - SLA_RETORNO_DUS;
+    if (atraso <= 0) sol._sla = { estado:'no_prazo', texto:'No prazo · '+decorridos+' d.u.', atraso:0 };
+    else sol._sla = { estado:'vencido', texto:'⚠ Vencido · '+atraso+' d.u.', atraso };
+  }
+
+  // Alerta de acompanhamento (SEM SLA oficial; só sinaliza)
+  sol._alertaAcomp = (sol._diasNaEtapa !== null && sol._diasNaEtapa >= ALERTA_ACOMP_DUS && consistencia !== 'regularizada');
+}
+
+// ============================================================================
+// FILTROS / ORDENAÇÃO
+// ============================================================================
+function aplicarFiltrosFila(){
+  const t = (FILTRO.texto||'').toLowerCase().trim();
+  // Fila ativa = válidas (com data em A) que NÃO estejam confirmadas como regularizadas.
+  // Inconsistências permanecem visíveis para conferência.
+  let r = TODAS_SOLICITACOES.filter(sol => sol._valida && sol._consistencia !== 'regularizada');
+  if (t) {
+    r = r.filter(sol => {
+      // Busca em: Nome(B), Assessoria(F), Corretora(G), LECOM(H), Chamado SF(K),
+      // ID (coluna AD), Motivo(D), Assunto(I), Telefone(C)
+      const campos = [
+        sol[COLS.B], sol[COLS.F], sol[COLS.G], sol[COLS.H],
+        sol[COLS.K], sol.id, sol[COLS.D], sol[COLS.I], sol[COLS.C]
+      ];
+      return campos.some(c => String(c||'').toLowerCase().indexOf(t) >= 0);
+    });
+  }
+  if (FILTRO.motivo) r = r.filter(s => obterMotivo(s) === FILTRO.motivo);
+  if (FILTRO.etapa)  r = r.filter(s => (s._etapaAtual||'') === FILTRO.etapa);
+  // Filtro por assessoria (coluna F). "__SEM__" seleciona apenas sem assessoria.
+  if (FILTRO.assessoria) {
+    if (FILTRO.assessoria === '__SEM__') {
+      r = r.filter(s => !String(s[COLS.F]||'').trim());
+    } else {
+      r = r.filter(s => String(s[COLS.F]||'').trim() === FILTRO.assessoria);
+    }
+  }
+  if (FILTRO.sla){
+    if (FILTRO.sla === 'vencido')     r = r.filter(s => s._sla.estado === 'vencido');
+    if (FILTRO.sla === 'no_prazo')    r = r.filter(s => s._sla.estado === 'no_prazo' || s._sla.estado === 'retornado_ok');
+    if (FILTRO.sla === 'sem_retorno') r = r.filter(s => !s._dRetorno);
+  }
+  if (FILTRO.alerta){
+    if (FILTRO.alerta === 'com')  r = r.filter(s => s._alertaAcomp);
+    if (FILTRO.alerta === 'sem')  r = r.filter(s => !s._alertaAcomp);
+  }
+  // Período por data de abertura (coluna A). Formato dos inputs: 'YYYY-MM-DD'
+  if (FILTRO.periodoDe) {
+    const de = parseData(FILTRO.periodoDe);
+    if (de) r = r.filter(s => s._dAbertura && s._dAbertura >= de);
+  }
+  if (FILTRO.periodoAte) {
+    const ate = parseData(FILTRO.periodoAte);
+    if (ate) r = r.filter(s => s._dAbertura && s._dAbertura <= ate);
+  }
+  // Ordenação
+  r.sort((a,b) => comparar(a,b,ORDENACAO.campo,ORDENACAO.direcao));
+  return r;
+}
+function comparar(a,b,campo,dir){
+  const sentido = dir==='asc'?1:-1;
+  let va, vb;
+  switch(campo){
+    case 'dataAbertura': va=a._dAbertura?a._dAbertura.getTime():Infinity; vb=b._dAbertura?b._dAbertura.getTime():Infinity; break;
+    case 'tempoTotal':   va=a._tempoTotal||0; vb=b._tempoTotal||0; break;
+    case 'diasEtapa':    va=a._diasNaEtapa||0; vb=b._diasNaEtapa||0; break;
+    case 'sla':          va=a._sla.atraso||0; vb=b._sla.atraso||0; break;
+    case 'id':           va=a.id||''; vb=b.id||''; break;
+    case 'motivo':       va=obterMotivo(a); vb=obterMotivo(b); break;
+    case 'etapa':        va=a._etapaAtual||''; vb=b._etapaAtual||''; break;
+    default: va=0; vb=0;
+  }
+  if (va < vb) return -1*sentido;
+  if (va > vb) return  1*sentido;
+  return 0;
+}
+
+// ============================================================================
+// RENDER FILA
+// ============================================================================
+function renderFila(){
+  // Universo real = só solicitações com data válida em A (ignora linhas-lixo da planilha)
+  const valid    = TODAS_SOLICITACOES.filter(s => s._valida);
+  // FILA ATIVA = tudo que não está regularizado (inclui as inconsistentes pra conferência)
+  const ativas   = valid.filter(s => s._consistencia !== 'regularizada');
+  const regularizadas = valid.filter(s => s._consistencia === 'regularizada');
+  // EM ABERTO = ativas SEM inconsistência (contagem "limpa", como pedido)
+  const emAbertoLimpas = ativas.filter(s => !s._inconsistente).length;
+  // INCONSISTÊNCIAS = soma dos 3 casos (reg_sem_data + v_sem_status + z_aberto_com_v)
+  const inconsistentes = ativas.filter(s => s._inconsistente).length;
+  // SLA e Sem Retorno — contagens válidas apenas sobre casos "em aberto limpos" + inconsistentes
+  // (um registro inconsistente ainda pode ter SLA vencido; contamos sobre ativas inteiras)
+  const slaVencidas = ativas.filter(s => s._sla.estado === 'vencido').length;
+  const semRetorno  = ativas.filter(s => !s._dRetorno).length;
+
+  document.getElementById('badgeFila').textContent = ativas.length;
+  document.getElementById('badgeFila').classList.remove('carregando');
+  document.getElementById('badgeHist').textContent = regularizadas.length;
+
+  const criticas = ativas.filter(s => s._sla.estado === 'vencido' && s._sla.atraso >= 5).length;
+  const alertas  = ativas.filter(s => s._alertaAcomp).length;
+
+  const filtradas = aplicarFiltrosFila();
+
+  const motivosSet = new Set(valid.map(obterMotivo));
+  const etapasSet  = new Set(ativas.map(s=>s._etapaAtual).filter(Boolean));
+  // Assessorias reais (coluna F). Vazias são tratadas separadamente via opção "__SEM__"
+  const assessoriasSet = new Set(
+    valid.map(s => String(s[COLS.F]||'').trim()).filter(a => a !== '')
+  );
+  const temSemAssessoria = valid.some(s => !String(s[COLS.F]||'').trim());
+
+  // KPIs — 6 cards. Em Aberto exclui inconsistências; estas têm seu próprio KPI.
+  const kpis = `
+    <div class="kpis" style="grid-template-columns:repeat(6,1fr)">
+      <div class="kpi total">
+        <div class="kpi-hist">base histórica: ${valid.length}</div>
+        <div class="kpi-label">FILA ATIVA</div>
+        <div class="kpi-value">${ativas.length}</div>
+        <div class="kpi-sub">válidas, não regularizadas</div>
+      </div>
+      <div class="kpi aberto">
+        <div class="kpi-label">EM ABERTO</div>
+        <div class="kpi-value">${emAbertoLimpas}</div>
+        <div class="kpi-sub">sem inconsistência Z/V</div>
+      </div>
+      <div class="kpi sla">
+        <div class="kpi-label">⚠ SLA RETORNO VENCIDO</div>
+        <div class="kpi-value">${slaVencidas}</div>
+        <div class="kpi-sub">regra oficial: 1 d.u.</div>
+      </div>
+      <div class="kpi sem-ret">
+        <div class="kpi-label">SEM RETORNO REG.</div>
+        <div class="kpi-value">${semRetorno}</div>
+        <div class="kpi-sub">coluna J vazia</div>
+      </div>
+      <div class="kpi ok">
+        <div class="kpi-label">REGULARIZADAS</div>
+        <div class="kpi-value">${regularizadas.length}</div>
+        <div class="kpi-sub">no histórico</div>
+      </div>
+      <div class="kpi" style="border-color:rgba(253,183,19,.3)">
+        <div class="kpi-label" style="color:var(--amarelo)">⚠ INCONSISTÊNCIAS</div>
+        <div class="kpi-value" style="color:var(--amarelo)">${inconsistentes}</div>
+        <div class="kpi-sub">a conferir (Z/V)</div>
+      </div>
+    </div>`;
+
+  const paineis = `
+    ${criticas>0 ? `
+    <div class="painel-urgente">
+      <span class="ico">🚨</span>
+      <div style="flex:1">
+        <h4>${criticas} solicitação(ões) crítica(s) · SLA de retorno vencido há 5+ d.u.</h4>
+        <p>Priorizar retorno ao corretor nestes casos · ordenadas pela mais antiga</p>
+      </div>
+    </div>` : ''}
+    ${alertas>0 ? `
+    <div class="painel-alerta">
+      <span class="ico">⏳</span>
+      <div style="flex:1">
+        <h4>${alertas} solicitação(ões) com alerta de acompanhamento</h4>
+        <p>Parada há ${ALERTA_ACOMP_DUS}+ dias na etapa atual · <b>sem SLA oficial</b> · avaliação do responsável recomendada</p>
+      </div>
+    </div>` : ''}
+    ${inconsistentes>0 ? `
+    <div class="painel-alerta" style="border-left-color:var(--amarelo);background:linear-gradient(90deg,rgba(253,183,19,.1),rgba(253,183,19,.02));border-color:rgba(253,183,19,.3)">
+      <span class="ico">⚠</span>
+      <div style="flex:1">
+        <h4 style="color:var(--amarelo)">${inconsistentes} solicitação(ões) com inconsistência Z/V</h4>
+        <p>Status "Regularizado" sem Data de Regularização OU Data preenchida sem Status · conferir</p>
+      </div>
+    </div>` : ''}
+  `;
+
+  const ordLabel = {dataAbertura:'Data de abertura',tempoTotal:'Tempo total',diasEtapa:'Dias na etapa',sla:'SLA retorno',id:'ID',motivo:'Motivo',etapa:'Etapa'}[ORDENACAO.campo]||ORDENACAO.campo;
+  const barra = `
+    <div class="ord-bar">
+      <span>📊 Ordenação: <b>${ordLabel} · ${ORDENACAO.direcao==='asc'?'crescente':'decrescente'}</b> ${ORDENACAO.campo==='dataAbertura'&&ORDENACAO.direcao==='asc'?'(padrão)':''}</span>
+      <span style="margin-left:auto">💡 Clique nos cabeçalhos pra alterar · <span class="ord-link" onclick="voltarPadrao()">Voltar ao padrão</span></span>
+      <span style="margin-left:auto;color:var(--fg3)">Exibindo ${filtradas.length} de ${ativas.length}</span>
+    </div>
+    <div class="legenda">
+      <b>Legenda:</b>
+      <div class="leg-item"><div class="leg-cor leg-vermelho"></div> <b>SLA de retorno vencido</b> — regra oficial 1 d.u.</div>
+      <div class="leg-item"><div class="leg-cor leg-laranja"></div> <b>Alerta de acompanhamento</b> — tempo prolongado na etapa</div>
+      <div class="leg-item"><div class="leg-cor leg-normal"></div> Dentro do prazo oficial</div>
+    </div>`;
+
+  // Opções de motivo e etapa (dinâmicas, da base real)
+  const motOps = [`<option value="">Todos motivos</option>`];
+  Array.from(motivosSet).sort().forEach(m => {
+    if (m && m !== '—') {
+      motOps.push(`<option value="${esc(m)}" ${FILTRO.motivo===m?'selected':''}>${esc(m)}</option>`);
+    }
+  });
+  const etOps = [`<option value="">Toda etapa</option>`];
+  Array.from(etapasSet).sort().forEach(e => {
+    etOps.push(`<option value="${esc(e)}" ${FILTRO.etapa===e?'selected':''}>${esc(e)}</option>`);
+  });
+  // Assessorias — dinâmicas, direto da coluna F. Preserva seleção se ainda existir.
+  const assessoriaAindaExiste = !FILTRO.assessoria
+    || FILTRO.assessoria === '__SEM__'
+    || assessoriasSet.has(FILTRO.assessoria);
+  if (!assessoriaAindaExiste) FILTRO.assessoria = '';
+  const asOps = [`<option value="">Todas as Assessorias</option>`];
+  Array.from(assessoriasSet).sort((a,b) => a.localeCompare(b,'pt-BR')).forEach(a => {
+    asOps.push(`<option value="${esc(a)}" ${FILTRO.assessoria===a?'selected':''}>${esc(a)}</option>`);
+  });
+  if (temSemAssessoria) {
+    asOps.push(`<option value="__SEM__" ${FILTRO.assessoria==='__SEM__'?'selected':''}>— sem assessoria —</option>`);
+  }
+
+  const filtros = `
+    <div class="filtros">
+      <input type="text" class="search" id="fTexto" placeholder="🔍 Nome, corretora, assessoria, LECOM, chamado SF, ID, assunto..." value="${esc(FILTRO.texto)}">
+      <select id="fAssessoria" title="Filtrar por assessoria (coluna F)">${asOps.join('')}</select>
+      <select id="fMotivo">${motOps.join('')}</select>
+      <select id="fEtapa">${etOps.join('')}</select>
+      <select id="fSla">
+        <option value="">SLA — todos</option>
+        <option value="vencido" ${FILTRO.sla==='vencido'?'selected':''}>⚠ Vencido</option>
+        <option value="no_prazo" ${FILTRO.sla==='no_prazo'?'selected':''}>No prazo</option>
+        <option value="sem_retorno" ${FILTRO.sla==='sem_retorno'?'selected':''}>Sem retorno registrado</option>
+      </select>
+      <select id="fAlerta">
+        <option value="">Alerta — todos</option>
+        <option value="com" ${FILTRO.alerta==='com'?'selected':''}>⏳ Com alerta</option>
+        <option value="sem" ${FILTRO.alerta==='sem'?'selected':''}>Sem alerta</option>
+      </select>
+      <span style="color:var(--fg2);font-size:11px">Período abertura:</span>
+      <input type="date" id="fPeriodoDe" value="${esc(FILTRO.periodoDe)}" title="Data inicial">
+      <span style="color:var(--fg3)">a</span>
+      <input type="date" id="fPeriodoAte" value="${esc(FILTRO.periodoAte)}" title="Data final">
+      <button class="btn-sm" onclick="limparFiltrosFila()" style="padding:7px 12px">Limpar</button>
+    </div>`;
+
+  const linhas = filtradas.map(sol => linhaFila(sol)).join('');
+  const seta = c => ORDENACAO.campo===c ? (ORDENACAO.direcao==='asc'?' <span class="sort">↑</span>':' <span class="sort">↓</span>') : '';
+  const tabela = `
+    <div class="wrap"><div class="tbl-container">
+      <table>
+      <thead><tr>
+        <th onclick="ordenar('id')">ID${seta('id')}</th>
+        <th onclick="ordenar('dataAbertura')">Data abertura${seta('dataAbertura')}</th>
+        <th>Solicitante / Corretora</th>
+        <th onclick="ordenar('motivo')">Motivo${seta('motivo')}</th>
+        <th onclick="ordenar('etapa')">Etapa atual${seta('etapa')}</th>
+        <th onclick="ordenar('diasEtapa')">Dias na etapa${seta('diasEtapa')}</th>
+        <th>Última mov.</th>
+        <th onclick="ordenar('tempoTotal')">Tempo total${seta('tempoTotal')}</th>
+        <th onclick="ordenar('sla')">SLA retorno${seta('sla')}</th>
+        <th>Alerta acomp.</th>
+        <th>Próxima ação</th>
+      </tr></thead>
+      <tbody>${linhas || '<tr><td colspan="11" style="text-align:center;color:var(--fg3);padding:30px">Nenhuma solicitação atende os filtros atuais</td></tr>'}</tbody>
+      </table>
+    </div></div>
+    <div class="nota-fase">
+      🔎 <b>Fase 2A · diagnóstico somente leitura.</b> Dias na Etapa e Tempo Total são calculados aqui no navegador em dias úteis (aba FERIADOS da planilha). As fórmulas das colunas X e Y da planilha serão inspecionadas separadamente (função <code>inspecionarFormulasXY</code>). Nenhuma gravação será feita nesta fase.
+    </div>`;
+
+  // Estrutura em 3 containers:
+  //   #filaTopo    = KPIs + painéis + barra + legenda  (muda quando filtros/dados mudam)
+  //   #filaFiltros = inputs + selects                   (NÃO é re-renderizado durante digitação)
+  //   #filaBaixo   = tabela + nota                      (muda quando filtros/dados mudam)
+  // Isso preserva foco e posição do cursor nos campos de texto.
+  const cont = document.getElementById('filaConteudo');
+  if (!document.getElementById('filaFiltros')) {
+    cont.innerHTML = `<div id="filaTopo"></div><div id="filaFiltros"></div><div id="filaBaixo"></div>`;
+  }
+  document.getElementById('filaTopo').innerHTML    = kpis + paineis + barra;
+  document.getElementById('filaFiltros').innerHTML = filtros;
+  document.getElementById('filaBaixo').innerHTML   = tabela;
+
+  // Conectar eventos — selects chamam atualizarListagemFila (não re-renderiza filtros);
+  // texto chama atualizarListagemFila para manter foco e posição do cursor
+  const bindSelect = (id, campo) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', e => {
+      FILTRO[campo] = e.target.value;
+      atualizarListagemFila();
+    });
+  };
+  const bindText = (id, campo) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', e => {
+      FILTRO[campo] = e.target.value;
+      atualizarListagemFila();
+    });
+  };
+  bindText('fTexto','texto');
+  bindSelect('fAssessoria','assessoria');
+  bindSelect('fMotivo','motivo');
+  bindSelect('fEtapa','etapa');
+  bindSelect('fSla','sla');
+  bindSelect('fAlerta','alerta');
+  bindSelect('fPeriodoDe','periodoDe');
+  bindSelect('fPeriodoAte','periodoAte');
+}
+
+// Atualiza SOMENTE os blocos de topo (KPIs/painéis/barra) e baixo (tabela).
+// NÃO toca em #filaFiltros, portanto preserva foco/cursor dos inputs.
+// Chamada a cada interação de filtro, busca ou ordenação.
+function atualizarListagemFila(){
+  const valid    = TODAS_SOLICITACOES.filter(s => s._valida);
+  const ativas   = valid.filter(s => s._consistencia !== 'regularizada');
+  const regularizadas = valid.filter(s => s._consistencia === 'regularizada');
+  const emAbertoLimpas = ativas.filter(s => !s._inconsistente).length;
+  const inconsistentes = ativas.filter(s => s._inconsistente).length;
+  const slaVencidas = ativas.filter(s => s._sla.estado === 'vencido').length;
+  const semRetorno  = ativas.filter(s => !s._dRetorno).length;
+  const criticas    = ativas.filter(s => s._sla.estado === 'vencido' && s._sla.atraso >= 5).length;
+  const alertas     = ativas.filter(s => s._alertaAcomp).length;
+  const filtradas   = aplicarFiltrosFila();
+
+  const badgeFila = document.getElementById('badgeFila');
+  if (badgeFila) { badgeFila.textContent = ativas.length; badgeFila.classList.remove('carregando'); }
+  const badgeHist = document.getElementById('badgeHist');
+  if (badgeHist) badgeHist.textContent = regularizadas.length;
+
+  // Reutiliza o mesmo HTML dos blocos sem tocar nos filtros
+  const kpis = `
+    <div class="kpis" style="grid-template-columns:repeat(6,1fr)">
+      <div class="kpi total"><div class="kpi-hist">base histórica: ${valid.length}</div><div class="kpi-label">FILA ATIVA</div><div class="kpi-value">${ativas.length}</div><div class="kpi-sub">válidas, não regularizadas</div></div>
+      <div class="kpi aberto"><div class="kpi-label">EM ABERTO</div><div class="kpi-value">${emAbertoLimpas}</div><div class="kpi-sub">sem inconsistência Z/V</div></div>
+      <div class="kpi sla"><div class="kpi-label">⚠ SLA RETORNO VENCIDO</div><div class="kpi-value">${slaVencidas}</div><div class="kpi-sub">regra oficial: 1 d.u.</div></div>
+      <div class="kpi sem-ret"><div class="kpi-label">SEM RETORNO REG.</div><div class="kpi-value">${semRetorno}</div><div class="kpi-sub">coluna J vazia</div></div>
+      <div class="kpi ok"><div class="kpi-label">REGULARIZADAS</div><div class="kpi-value">${regularizadas.length}</div><div class="kpi-sub">no histórico</div></div>
+      <div class="kpi" style="border-color:rgba(253,183,19,.3)"><div class="kpi-label" style="color:var(--amarelo)">⚠ INCONSISTÊNCIAS</div><div class="kpi-value" style="color:var(--amarelo)">${inconsistentes}</div><div class="kpi-sub">a conferir (Z/V)</div></div>
+    </div>`;
+
+  const paineis = `
+    ${criticas>0 ? `<div class="painel-urgente"><span class="ico">🚨</span><div style="flex:1"><h4>${criticas} solicitação(ões) crítica(s) · SLA de retorno vencido há 5+ d.u.</h4><p>Priorizar retorno ao corretor nestes casos · ordenadas pela mais antiga</p></div></div>` : ''}
+    ${alertas>0 ? `<div class="painel-alerta"><span class="ico">⏳</span><div style="flex:1"><h4>${alertas} solicitação(ões) com alerta de acompanhamento</h4><p>Parada há ${ALERTA_ACOMP_DUS}+ dias na etapa atual · <b>sem SLA oficial</b> · avaliação do responsável recomendada</p></div></div>` : ''}
+    ${inconsistentes>0 ? `<div class="painel-alerta" style="border-left-color:var(--amarelo);background:linear-gradient(90deg,rgba(253,183,19,.1),rgba(253,183,19,.02));border-color:rgba(253,183,19,.3)"><span class="ico">⚠</span><div style="flex:1"><h4 style="color:var(--amarelo)">${inconsistentes} solicitação(ões) com inconsistência Z/V</h4><p>Conferir manualmente · ver coluna "Próxima ação"</p></div></div>` : ''}
+  `;
+
+  const ordLabel = {dataAbertura:'Data de abertura',tempoTotal:'Tempo total',diasEtapa:'Dias na etapa',sla:'SLA retorno',id:'ID',motivo:'Motivo',etapa:'Etapa'}[ORDENACAO.campo]||ORDENACAO.campo;
+  const barra = `
+    <div class="ord-bar">
+      <span>📊 Ordenação: <b>${esc(ordLabel)} · ${ORDENACAO.direcao==='asc'?'crescente':'decrescente'}</b> ${ORDENACAO.campo==='dataAbertura'&&ORDENACAO.direcao==='asc'?'(padrão)':''}</span>
+      <span style="margin-left:auto">💡 Clique nos cabeçalhos pra alterar · <span class="ord-link" onclick="voltarPadrao()">Voltar ao padrão</span></span>
+      <span style="margin-left:auto;color:var(--fg3)">Exibindo ${filtradas.length} de ${ativas.length}</span>
+    </div>
+    <div class="legenda">
+      <b>Legenda:</b>
+      <div class="leg-item"><div class="leg-cor leg-vermelho"></div> <b>SLA de retorno vencido</b> — regra oficial 1 d.u.</div>
+      <div class="leg-item"><div class="leg-cor leg-laranja"></div> <b>Alerta de acompanhamento</b> — tempo prolongado na etapa</div>
+      <div class="leg-item"><div class="leg-cor leg-normal"></div> Dentro do prazo oficial</div>
+    </div>`;
+
+  const linhas = filtradas.map(sol => linhaFila(sol)).join('');
+  const seta = c => ORDENACAO.campo===c ? (ORDENACAO.direcao==='asc'?' <span class="sort">↑</span>':' <span class="sort">↓</span>') : '';
+  const tabela = `
+    <div class="wrap"><div class="tbl-container">
+      <table>
+      <thead><tr>
+        <th onclick="ordenar('id')">ID${seta('id')}</th>
+        <th onclick="ordenar('dataAbertura')">Data abertura${seta('dataAbertura')}</th>
+        <th>Solicitante / Corretora</th>
+        <th onclick="ordenar('motivo')">Motivo${seta('motivo')}</th>
+        <th onclick="ordenar('etapa')">Etapa atual${seta('etapa')}</th>
+        <th onclick="ordenar('diasEtapa')">Dias na etapa${seta('diasEtapa')}</th>
+        <th>Última mov.</th>
+        <th onclick="ordenar('tempoTotal')">Tempo total${seta('tempoTotal')}</th>
+        <th onclick="ordenar('sla')">SLA retorno${seta('sla')}</th>
+        <th>Alerta acomp.</th>
+        <th>Próxima ação</th>
+      </tr></thead>
+      <tbody>${linhas || '<tr><td colspan="11" style="text-align:center;color:var(--fg3);padding:30px">Nenhuma solicitação atende os filtros atuais</td></tr>'}</tbody>
+      </table>
+    </div></div>
+    <div class="nota-fase">
+      🔎 <b>Fase 2A · diagnóstico somente leitura.</b> Dias na Etapa e Tempo Total calculados no navegador em dias úteis (aba FERIADOS). Fórmulas X e Y da planilha serão inspecionadas separadamente. Nenhuma gravação é feita.
+    </div>`;
+
+  const topoEl = document.getElementById('filaTopo');
+  const baixoEl = document.getElementById('filaBaixo');
+  if (topoEl)  topoEl.innerHTML  = kpis + paineis + barra;
+  if (baixoEl) baixoEl.innerHTML = tabela;
+}
+
+// Limpar todos os filtros da Fila Ativa (mantém ordenação)
+// Precisa re-renderizar os selects pq os valores selecionados mudaram
+function limparFiltrosFila(){
+  FILTRO = { texto:'', motivo:'', etapa:'', sla:'', alerta:'', assessoria:'', periodoDe:'', periodoAte:'' };
+  renderFila();
+}
+
+function linhaFila(sol){
+  // Classe da linha
+  let cls = '';
+  if (sol._sla.estado === 'vencido') cls = 'sla-vencido';
+  else if (sol._alertaAcomp) cls = 'alerta-etapa';
+  if (sol._inconsistente) cls = 'inconsistente';
+
+  const motivo = obterMotivo(sol);
+  const cm = classeMotivo(motivo);
+
+  const diasEt = sol._diasNaEtapa;
+  const diasEtCls = diasEt==null?'idade-ok':(diasEt>=10?'idade-vermelho':(diasEt>=ALERTA_ACOMP_DUS?'idade-laranja':'idade-ok'));
+
+  // Última mov.
+  let ultMovHtml;
+  if (sol._ultMov) {
+    ultMovHtml = `${formatarBR(sol._ultMov.data)}<br><span style="color:var(--fg3);font-size:10px">${esc(sol._ultMov.rotulo)}</span>`;
+  } else {
+    ultMovHtml = `<span class="sem-dado">Sem movimentação registrada</span>`;
+  }
+
+  // SLA badge
+  let slaBadge;
+  switch(sol._sla.estado){
+    case 'vencido':         slaBadge=`<span class="badge badge-vermelho">${esc(sol._sla.texto)}</span>`; break;
+    case 'retornado_atraso':slaBadge=`<span class="badge badge-ambar">${esc(sol._sla.texto)}</span>`; break;
+    case 'retornado_ok':    slaBadge=`<span class="badge badge-verde">OK · retornado</span>`; break;
+    case 'no_prazo':        slaBadge=`<span class="badge badge-amarelo">No prazo</span>`; break;
+    default:                slaBadge=`<span class="badge badge-cinza">—</span>`;
+  }
+
+  const alertaBadge = sol._alertaAcomp
+    ? `<span class="badge badge-laranja">⏳ Acompanhar</span>`
+    : `<span class="badge badge-cinza">—</span>`;
+
+  // Próxima ação (só sugere quando há regra oficial; senão neutro)
+  let proxAcao;
+  if (sol._consistencia === 'inconsistente_reg_sem_data') {
+    // Z="Regularizado" + V vazia: inconsistência, mantém visível, não classifica como concluída
+    proxAcao = `<span class="prox-acao">Inconsistência — conferir Data de Regularização</span>`;
+  } else if (sol._consistencia === 'inconsistente_v_sem_status') {
+    // V preenchida + Z vazia: sinaliza regularização registrada, pede confirmação
+    proxAcao = `<span class="prox-acao">Regularização registrada — confirmar Status</span>`;
+  } else if (sol._consistencia === 'inconsistente_z_aberto_com_v') {
+    // Z="Em Aberto" + V preenchida: inconsistência, conferir qual é o real
+    proxAcao = `<span class="prox-acao">Inconsistência — Status "Em Aberto" com Data preenchida</span>`;
+  } else if (sol._sla.estado === 'vencido' || sol._sla.estado === 'no_prazo') {
+    proxAcao = `<span class="prox-acao">Dar retorno ao corretor</span>`;
+  } else {
+    proxAcao = `<span class="prox-neutro">A avaliar pelo responsável</span>`;
+  }
+
+  const solicitante = esc(sol[COLS.B]||'—');
+  const corretora = esc(sol[COLS.G]||sol[COLS.F]||'—');
+  const dAbTxt = sol._dAbertura ? formatarBR(sol._dAbertura)+' ('+diaSemanaBR(sol._dAbertura)+')' : '—';
+  const idTxt = sol.id ? esc(sol.id) : '(sem ID na planilha)';
+  const idCls = sol.id ? '' : 'sem-dado';
+  const diasEtTxt = diasEt==null ? '—' : diasEt+' d.u.';
+  const tempoTotTxt = sol._tempoTotal==null ? '—' : sol._tempoTotal+' d.u.';
+
+  return `
+    <tr class="${cls}" onclick="abrirModal(${sol._linha})">
+      <td><b class="${idCls}">${idTxt}</b></td>
+      <td>${dAbTxt}</td>
+      <td>${solicitante}<br><span style="color:var(--fg3);font-size:10px">${corretora}</span></td>
+      <td class="${cm}">${esc(motivo)}</td>
+      <td>${esc(sol._etapaAtual||'—')}</td>
+      <td><span class="${diasEtCls}">${diasEtTxt}</span></td>
+      <td>${ultMovHtml}</td>
+      <td>${tempoTotTxt}</td>
+      <td>${slaBadge}</td>
+      <td>${alertaBadge}</td>
+      <td>${proxAcao}</td>
+    </tr>`;
+}
+
+function ordenar(campo){
+  if (ORDENACAO.campo === campo) ORDENACAO.direcao = ORDENACAO.direcao==='asc'?'desc':'asc';
+  else { ORDENACAO.campo = campo; ORDENACAO.direcao = 'asc'; }
+  atualizarListagemFila();
+}
+function voltarPadrao(){
+  ORDENACAO = { campo:'dataAbertura', direcao:'asc' };
+  atualizarListagemFila();
+}
+
+// ============================================================================
+// HISTÓRICO · com filtros funcionais (assessoria, motivo, texto, períodos)
+// ============================================================================
+function aplicarFiltrosHist(regsBase){
+  const t = (FILTRO_HIST.texto||'').toLowerCase().trim();
+  let r = regsBase.slice();
+  if (t) {
+    r = r.filter(sol => {
+      const campos = [
+        sol[COLS.B], sol[COLS.F], sol[COLS.G], sol[COLS.H],
+        sol[COLS.K], sol.id, sol[COLS.D], sol[COLS.I], sol[COLS.C]
+      ];
+      return campos.some(c => String(c||'').toLowerCase().indexOf(t) >= 0);
+    });
+  }
+  if (FILTRO_HIST.motivo) r = r.filter(s => obterMotivo(s) === FILTRO_HIST.motivo);
+  if (FILTRO_HIST.assessoria) {
+    if (FILTRO_HIST.assessoria === '__SEM__') {
+      r = r.filter(s => !String(s[COLS.F]||'').trim());
+    } else {
+      r = r.filter(s => String(s[COLS.F]||'').trim() === FILTRO_HIST.assessoria);
+    }
+  }
+  const aDe  = parseData(FILTRO_HIST.aberturaDe);
+  const aAte = parseData(FILTRO_HIST.aberturaAte);
+  const rDe  = parseData(FILTRO_HIST.regularDe);
+  const rAte = parseData(FILTRO_HIST.regularAte);
+  if (aDe)  r = r.filter(s => s._dAbertura && s._dAbertura >= aDe);
+  if (aAte) r = r.filter(s => s._dAbertura && s._dAbertura <= aAte);
+  if (rDe)  r = r.filter(s => s._dRegul    && s._dRegul    >= rDe);
+  if (rAte) r = r.filter(s => s._dRegul    && s._dRegul    <= rAte);
+  return r;
+}
+
+// Mediana convencional. Pré-requisito: 'tempos' JÁ ordenado em ordem crescente.
+// - n=0 → null (UI mostra "—")
+// - n=1 → tempos[0]
+// - n ímpar → valor central
+// - n par   → média dos dois valores centrais
+// Resultado é arredondado para inteiro (dias úteis são inteiros)
+function calcularMediana(tempos){
+  if (!tempos || tempos.length === 0) return null;
+  const n = tempos.length;
+  if (n === 1) return tempos[0];
+  if (n % 2 === 1) return tempos[(n - 1) / 2];
+  // n par: média dos dois centrais
+  return Math.round((tempos[n/2 - 1] + tempos[n/2]) / 2);
+}
+
+function renderHistorico(){
+  // Universo = regularizadas válidas (Z="Regularizado" + V preenchida + data em A)
+  const regsBase = TODAS_SOLICITACOES.filter(s => s._valida && s._consistencia === 'regularizada');
+
+  // Assessorias reais no universo do histórico
+  const assessoriasSet = new Set(
+    regsBase.map(s => String(s[COLS.F]||'').trim()).filter(a => a !== '')
+  );
+  const temSemAssessoria = regsBase.some(s => !String(s[COLS.F]||'').trim());
+  // Preserva seleção de assessoria se ainda existir
+  const asOK = !FILTRO_HIST.assessoria
+    || FILTRO_HIST.assessoria === '__SEM__'
+    || assessoriasSet.has(FILTRO_HIST.assessoria);
+  if (!asOK) FILTRO_HIST.assessoria = '';
+
+  // Motivos reais no universo do histórico
+  const motivosSet = new Set(regsBase.map(obterMotivo).filter(m => m && m !== '—'));
+
+  // Aplicar filtros
+  const regs = aplicarFiltrosHist(regsBase);
+
+  // Métricas reativas aos filtros
+  const tempos = regs.map(s => s._tempoTotal).filter(t => t!=null).sort((a,b)=>a-b);
+  const n = tempos.length;
+  const media = n ? Math.round(tempos.reduce((a,b)=>a+b,0)/n) : null;
+  const mediana = calcularMediana(tempos);
+
+  // Tempo médio por motivo (sobre filtrados)
+  const porMotivo = {};
+  regs.forEach(s => {
+    const m = obterMotivo(s);
+    porMotivo[m] = porMotivo[m] || [];
+    porMotivo[m].push(s._tempoTotal);
+  });
+  const motivosPrincipais = ['Abertura de código','Problema de comissão','Transferência de assessoria','Alteração de comissionamento'];
+  const porMotivoCanon = motivosPrincipais.map(mp => {
+    const chave = Object.keys(porMotivo).find(k =>
+      k.toLowerCase().indexOf(mp.toLowerCase().split(' ')[0])>=0 &&
+      k.toLowerCase().indexOf(mp.toLowerCase().split(' ').pop())>=0
+    );
+    const ts = chave ? porMotivo[chave] : [];
+    return { motivo:mp, n:ts.length, media: ts.length ? Math.round(ts.reduce((a,b)=>a+b,0)/ts.length) : null };
+  });
+
+  const kpis = `
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi ok">
+        <div class="kpi-hist">base histórica: ${regsBase.length}</div>
+        <div class="kpi-label">REGULARIZADAS NO FILTRO</div>
+        <div class="kpi-value">${regs.length}</div>
+        <div class="kpi-sub">de ${regsBase.length} na base</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">⏱ TEMPO MÉDIO</div>
+        <div class="kpi-value" style="color:var(--azul-c)">${media!=null?media+' d.u.':'—'}</div>
+        <div class="kpi-sub">amostra n=${n}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">⏱ MEDIANA</div>
+        <div class="kpi-value" style="color:var(--azul-c)">${mediana!=null?mediana+' d.u.':'—'}</div>
+        <div class="kpi-sub">amostra n=${n}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">N DE AMOSTRA</div>
+        <div class="kpi-value" style="color:var(--amarelo)">${n}</div>
+        <div class="kpi-sub">quanto maior, mais confiável</div>
+      </div>
+    </div>`;
+
+  const barra = `
+    <div class="ord-bar">
+      <span>📁 Histórico preservado · nenhuma linha é apagada ou movida da planilha oficial</span>
+      <span style="margin-left:auto;color:var(--fg3)">Exibindo ${regs.length} de ${regsBase.length}</span>
+    </div>`;
+
+  // Filtros do histórico
+  const asOps = [`<option value="">Todas as Assessorias</option>`];
+  Array.from(assessoriasSet).sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(a => {
+    asOps.push(`<option value="${esc(a)}" ${FILTRO_HIST.assessoria===a?'selected':''}>${esc(a)}</option>`);
+  });
+  if (temSemAssessoria) {
+    asOps.push(`<option value="__SEM__" ${FILTRO_HIST.assessoria==='__SEM__'?'selected':''}>— sem assessoria —</option>`);
+  }
+  const motOps = [`<option value="">Todos motivos</option>`];
+  Array.from(motivosSet).sort().forEach(m => {
+    motOps.push(`<option value="${esc(m)}" ${FILTRO_HIST.motivo===m?'selected':''}>${esc(m)}</option>`);
+  });
+
+  const filtros = `
+    <div class="filtros">
+      <input type="text" class="search" id="hTexto" placeholder="🔍 ID, nome, corretora, assessoria, LECOM, chamado SF..." value="${esc(FILTRO_HIST.texto)}">
+      <select id="hAssessoria">${asOps.join('')}</select>
+      <select id="hMotivo">${motOps.join('')}</select>
+      <span style="color:var(--fg2);font-size:11px">Abertura:</span>
+      <input type="date" id="hAberturaDe" value="${esc(FILTRO_HIST.aberturaDe)}" title="Abertura inicial">
+      <span style="color:var(--fg3)">a</span>
+      <input type="date" id="hAberturaAte" value="${esc(FILTRO_HIST.aberturaAte)}" title="Abertura final">
+      <span style="color:var(--fg2);font-size:11px">Regularização:</span>
+      <input type="date" id="hRegularDe" value="${esc(FILTRO_HIST.regularDe)}" title="Regularização inicial">
+      <span style="color:var(--fg3)">a</span>
+      <input type="date" id="hRegularAte" value="${esc(FILTRO_HIST.regularAte)}" title="Regularização final">
+      <button class="btn-sm" onclick="limparFiltrosHist()" style="padding:7px 12px">Limpar</button>
+    </div>`;
+
+  const linhasHist = regs
+    .sort((a,b) => (b._dRegul?.getTime()||0) - (a._dRegul?.getTime()||0))
+    .map(sol => {
+      const cm = classeMotivo(obterMotivo(sol));
+      const diff = (media!=null && sol._tempoTotal!=null) ? (sol._tempoTotal - media) : null;
+      let diffBadge;
+      if (diff==null) diffBadge = '—';
+      else if (diff > 0)  diffBadge = `<span style="color:var(--vermelho)">+${diff} vs. média</span>`;
+      else if (diff < 0)  diffBadge = `<span style="color:var(--verde)">${diff} vs. média</span>`;
+      else                diffBadge = `<span style="color:var(--fg2)">= média</span>`;
+      return `
+        <tr onclick="abrirModal(${sol._linha})">
+          <td><b>${esc(sol.id||'(sem ID)')}</b></td>
+          <td>${sol._dAbertura?formatarBR(sol._dAbertura)+' ('+diaSemanaBR(sol._dAbertura)+')':'—'}</td>
+          <td>${sol._dRegul?formatarBR(sol._dRegul)+' ('+diaSemanaBR(sol._dRegul)+')':'—'}</td>
+          <td>${esc(sol[COLS.B]||'—')}<br><span style="color:var(--fg3);font-size:10px">${esc(sol[COLS.F]||'—')}</span></td>
+          <td>${esc(sol[COLS.G]||'—')}</td>
+          <td class="${cm}">${esc(obterMotivo(sol))}</td>
+          <td>${sol._tempoTotal!=null?sol._tempoTotal+' d.u.':'—'}</td>
+          <td>${diffBadge}</td>
+        </tr>`;
+    }).join('');
+
+  const tabela = `
+    <div class="wrap"><div class="tbl-container">
+      <table>
+      <thead><tr>
+        <th>ID</th>
+        <th>Data abertura</th>
+        <th>Data regularização <span class="sort">↓</span></th>
+        <th>Solicitante / Assessoria</th>
+        <th>Corretora</th>
+        <th>Motivo</th>
+        <th>Tempo total</th>
+        <th>Comparado à média</th>
+      </tr></thead>
+      <tbody>${linhasHist || '<tr><td colspan="8" style="text-align:center;color:var(--fg3);padding:30px">Nenhuma regularizada atende os filtros atuais</td></tr>'}</tbody>
+      </table>
+    </div></div>
+    <div class="wrap">
+      <div class="section" style="margin:0">
+        <div class="section-title">📊 TEMPO MÉDIO POR MOTIVO · base = conjunto filtrado</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px">
+          ${porMotivoCanon.map(p => `
+            <div>
+              <div style="font-size:10px;color:var(--fg3)">${esc(p.motivo)}</div>
+              <div style="font-size:17px;color:${p.n?'var(--azul-c)':'var(--fg3)'}">${p.media!=null?p.media+' <span style="font-size:10px">d.u.</span>':'—'}</div>
+              <div class="hint">${p.n?'média · ':''}<b>n=${p.n}</b></div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="hint" style="margin-top:12px">💡 Médias/medianas refletem SOMENTE o conjunto filtrado. Com n pequeno (0 ou 1), a estatística não é representativa. Limpar os filtros amplia a amostra.</div>
+      </div>
+    </div>`;
+
+  // 3 containers: filtros preservados; KPIs/barra e tabela re-renderizáveis sem perder foco
+  const cont = document.getElementById('histConteudo');
+  if (!document.getElementById('histFiltros')) {
+    cont.innerHTML = `<div id="histTopo"></div><div id="histFiltros"></div><div id="histTabela"></div>`;
+  }
+  document.getElementById('histTopo').innerHTML    = kpis + barra;
+  document.getElementById('histFiltros').innerHTML = filtros;
+  document.getElementById('histTabela').innerHTML  = tabela;
+
+  // Binds — selects e inputs usam atualizarListagemHist (NÃO reconstrói os filtros)
+  const bindHSelect = (id, campo) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', e => { FILTRO_HIST[campo] = e.target.value; atualizarListagemHist(); });
+  };
+  const bindHText = (id, campo) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', e => { FILTRO_HIST[campo] = e.target.value; atualizarListagemHist(); });
+  };
+  bindHText('hTexto','texto');
+  bindHSelect('hAssessoria','assessoria');
+  bindHSelect('hMotivo','motivo');
+  bindHSelect('hAberturaDe','aberturaDe');
+  bindHSelect('hAberturaAte','aberturaAte');
+  bindHSelect('hRegularDe','regularDe');
+  bindHSelect('hRegularAte','regularAte');
+}
+
+// Recalcula KPIs/barra/tabela do histórico SEM tocar nos filtros (preserva foco).
+// Chamada por eventos dos inputs e selects.
+function atualizarListagemHist(){
+  const regsBase = TODAS_SOLICITACOES.filter(s => s._valida && s._consistencia === 'regularizada');
+  const regs = aplicarFiltrosHist(regsBase);
+  const tempos = regs.map(s => s._tempoTotal).filter(t => t!=null).sort((a,b)=>a-b);
+  const n = tempos.length;
+  const media = n ? Math.round(tempos.reduce((a,b)=>a+b,0)/n) : null;
+  const mediana = calcularMediana(tempos);
+
+  // Tempo médio por motivo (sobre filtrados)
+  const porMotivo = {};
+  regs.forEach(s => {
+    const m = obterMotivo(s);
+    porMotivo[m] = porMotivo[m] || [];
+    porMotivo[m].push(s._tempoTotal);
+  });
+  const motivosPrincipais = ['Abertura de código','Problema de comissão','Transferência de assessoria','Alteração de comissionamento'];
+  const porMotivoCanon = motivosPrincipais.map(mp => {
+    const chave = Object.keys(porMotivo).find(k =>
+      k.toLowerCase().indexOf(mp.toLowerCase().split(' ')[0])>=0 &&
+      k.toLowerCase().indexOf(mp.toLowerCase().split(' ').pop())>=0
+    );
+    const ts = chave ? porMotivo[chave] : [];
+    return { motivo:mp, n:ts.length, media: ts.length ? Math.round(ts.reduce((a,b)=>a+b,0)/ts.length) : null };
+  });
+
+  const kpis = `
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi ok"><div class="kpi-hist">base histórica: ${regsBase.length}</div><div class="kpi-label">REGULARIZADAS NO FILTRO</div><div class="kpi-value">${regs.length}</div><div class="kpi-sub">de ${regsBase.length} na base</div></div>
+      <div class="kpi"><div class="kpi-label">⏱ TEMPO MÉDIO</div><div class="kpi-value" style="color:var(--azul-c)">${media!=null?media+' d.u.':'—'}</div><div class="kpi-sub">amostra n=${n}</div></div>
+      <div class="kpi"><div class="kpi-label">⏱ MEDIANA</div><div class="kpi-value" style="color:var(--azul-c)">${mediana!=null?mediana+' d.u.':'—'}</div><div class="kpi-sub">amostra n=${n}</div></div>
+      <div class="kpi"><div class="kpi-label">N DE AMOSTRA</div><div class="kpi-value" style="color:var(--amarelo)">${n}</div><div class="kpi-sub">quanto maior, mais confiável</div></div>
+    </div>`;
+  const barra = `
+    <div class="ord-bar">
+      <span>📁 Histórico preservado · nenhuma linha é apagada ou movida da planilha oficial</span>
+      <span style="margin-left:auto;color:var(--fg3)">Exibindo ${regs.length} de ${regsBase.length}</span>
+    </div>`;
+
+  const linhasHist = regs
+    .sort((a,b) => (b._dRegul?.getTime()||0) - (a._dRegul?.getTime()||0))
+    .map(sol => {
+      const cm = classeMotivo(obterMotivo(sol));
+      const diff = (media!=null && sol._tempoTotal!=null) ? (sol._tempoTotal - media) : null;
+      let diffBadge;
+      if (diff==null) diffBadge = '—';
+      else if (diff > 0)  diffBadge = `<span style="color:var(--vermelho)">+${diff} vs. média</span>`;
+      else if (diff < 0)  diffBadge = `<span style="color:var(--verde)">${diff} vs. média</span>`;
+      else                diffBadge = `<span style="color:var(--fg2)">= média</span>`;
+      return `
+        <tr onclick="abrirModal(${sol._linha})">
+          <td><b>${esc(sol.id||'(sem ID)')}</b></td>
+          <td>${sol._dAbertura?formatarBR(sol._dAbertura)+' ('+diaSemanaBR(sol._dAbertura)+')':'—'}</td>
+          <td>${sol._dRegul?formatarBR(sol._dRegul)+' ('+diaSemanaBR(sol._dRegul)+')':'—'}</td>
+          <td>${esc(sol[COLS.B]||'—')}<br><span style="color:var(--fg3);font-size:10px">${esc(sol[COLS.F]||'—')}</span></td>
+          <td>${esc(sol[COLS.G]||'—')}</td>
+          <td class="${cm}">${esc(obterMotivo(sol))}</td>
+          <td>${sol._tempoTotal!=null?sol._tempoTotal+' d.u.':'—'}</td>
+          <td>${diffBadge}</td>
+        </tr>`;
+    }).join('');
+
+  const tabela = `
+    <div class="wrap"><div class="tbl-container">
+      <table>
+      <thead><tr>
+        <th>ID</th><th>Data abertura</th><th>Data regularização <span class="sort">↓</span></th>
+        <th>Solicitante / Assessoria</th><th>Corretora</th><th>Motivo</th>
+        <th>Tempo total</th><th>Comparado à média</th>
+      </tr></thead>
+      <tbody>${linhasHist || '<tr><td colspan="8" style="text-align:center;color:var(--fg3);padding:30px">Nenhuma regularizada atende os filtros atuais</td></tr>'}</tbody>
+      </table>
+    </div></div>
+    <div class="wrap"><div class="section" style="margin:0">
+      <div class="section-title">📊 TEMPO MÉDIO POR MOTIVO · base = conjunto filtrado</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px">
+        ${porMotivoCanon.map(p => `
+          <div>
+            <div style="font-size:10px;color:var(--fg3)">${esc(p.motivo)}</div>
+            <div style="font-size:17px;color:${p.n?'var(--azul-c)':'var(--fg3)'}">${p.media!=null?p.media+' <span style="font-size:10px">d.u.</span>':'—'}</div>
+            <div class="hint">${p.n?'média · ':''}<b>n=${p.n}</b></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="hint" style="margin-top:12px">💡 Médias/medianas refletem SOMENTE o conjunto filtrado. Com n pequeno (0 ou 1), a estatística não é representativa.</div>
+    </div></div>`;
+
+  const topoEl   = document.getElementById('histTopo');
+  const tabelaEl = document.getElementById('histTabela');
+  if (topoEl)   topoEl.innerHTML   = kpis + barra;
+  if (tabelaEl) tabelaEl.innerHTML = tabela;
+}
+
+function limparFiltrosHist(){
+  FILTRO_HIST = { texto:'', motivo:'', assessoria:'', aberturaDe:'', aberturaAte:'', regularDe:'', regularAte:'' };
+  renderHistorico();
+}
+
+// ============================================================================
+// MODAL (SOMENTE LEITURA)
+// ============================================================================
+function abrirModal(linha){
+  const sol = TODAS_SOLICITACOES.find(s => s._linha === linha);
+  if (!sol) return;
+  const motivo = obterMotivo(sol);
+  const idTxt = esc(sol.id || '(sem ID)');
+  document.getElementById('modalTitulo').innerHTML =
+    `🎫 ${idTxt} · ${esc(motivo.toUpperCase())} · ${esc(sol[COLS.B]||'—')} <span class="diagnostico-badge">SOMENTE LEITURA</span>`;
+
+  const body = ehAberturaDeCodigo(sol) ? renderModalAbertura(sol) : renderModalSimples(sol);
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalOverlay').classList.add('show');
+  MODAL_ABERTO = true;  // pausa o auto-refresh enquanto este modal está aberto
+}
+function fecharModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+  MODAL_ABERTO = false;  // libera auto-refresh
+}
+
+function pillsBase(sol){
+  // ultMov monta string com data (formatada, segura) e rotulo (hardcoded no código).
+  // esc() aplicado por defesa em profundidade — se rotulo passar a vir da planilha, não vira XSS.
+  const ultMov = sol._ultMov
+    ? esc(formatarBR(sol._ultMov.data) + ' · ' + sol._ultMov.rotulo)
+    : 'sem movimentação registrada';
+  const proxTxt = (sol._sla.estado==='vencido'||sol._sla.estado==='no_prazo') ? 'Dar retorno ao corretor' : 'A avaliar pelo responsável';
+  return `
+    <div class="pills" style="margin-bottom:14px">
+      <span class="pill" style="color:var(--laranja);border-color:var(--laranja)">Etapa atual: ${esc(sol._etapaAtual||'—')}</span>
+      <span class="pill" style="color:${sol._ultMov?'var(--fg2)':'var(--fg3)'}">Última movimentação: ${ultMov}</span>
+      <span class="pill" style="color:${(sol._sla.estado==='vencido'||sol._sla.estado==='no_prazo')?'var(--azul-c)':'var(--fg3)'}">Próxima ação: ${proxTxt}</span>
+    </div>`;
+}
+
+function metricasModal(sol){
+  const slaCor = sol._sla.estado==='vencido'?'var(--vermelho)':(sol._sla.estado==='retornado_ok'?'var(--verde)':'var(--fg)');
+  const slaTxt = sol._sla.estado==='vencido'?'⚠ Vencido':(sol._sla.estado==='retornado_ok'?'OK':(sol._sla.estado==='no_prazo'?'No prazo':sol._sla.texto));
+  const slaSub = sol._sla.estado==='vencido'?`há ${sol._sla.atraso} d.u. · regra 1 d.u.`:(sol._sla.estado==='retornado_ok'?'retornado dentro do prazo':'regra 1 d.u.');
+  const diasEtCor = (sol._diasNaEtapa!=null && sol._diasNaEtapa>=ALERTA_ACOMP_DUS) ? 'var(--laranja)' : 'var(--fg)';
+  const totalCor  = sol._tempoTotal!=null && sol._tempoTotal>=10 ? 'var(--vermelho)' : 'var(--fg)';
+  const dAbTxt    = sol._dAbertura ? 'desde '+formatarBR(sol._dAbertura) : 'sem data';
+  const statusCor = sol._statusZ==='Regularizado'?'var(--verde)':'var(--amarelo)';
+  const statusTxt = esc(sol._statusZ || 'Em Aberto');
+  const statusSub = sol._statusZ ? 'coluna Z' : 'coluna Z vazia · UI mostra Em Aberto';
+  return `
+    <div class="metricas">
+      <div class="metrica"><div class="metrica-label">⏱ TEMPO TOTAL</div><div class="metrica-value" style="color:${totalCor}">${sol._tempoTotal!=null?sol._tempoTotal+' d.u.':'—'}</div><div class="metrica-sub">${dAbTxt}</div></div>
+      <div class="metrica"><div class="metrica-label">⏳ DIAS NA ETAPA</div><div class="metrica-value" style="color:${diasEtCor}">${sol._diasNaEtapa!=null?sol._diasNaEtapa+' d.u.':'—'}</div><div class="metrica-sub">${esc(sol._etapaAtual||'—')}</div></div>
+      <div class="metrica"><div class="metrica-label">📞 SLA RETORNO</div><div class="metrica-value" style="color:${slaCor};font-size:14px">${slaTxt}</div><div class="metrica-sub">${esc(slaSub)}</div></div>
+      <div class="metrica"><div class="metrica-label">🏷 STATUS</div><div class="metrica-value" style="color:${statusCor};font-size:14px">${statusTxt}</div><div class="metrica-sub">${esc(statusSub)}</div></div>
+    </div>`;
+}
+
+function area1Formulario(sol){
+  const dAbTxt = sol._dAbertura ? formatarBR(sol._dAbertura)+' ('+diaSemanaBR(sol._dAbertura)+')' : '—';
+  return `
+    <div class="section">
+      <div class="section-title">📄 ÁREA 1 · DADOS DO FORMULÁRIO (somente leitura · fonte Google Forms)</div>
+      <div class="grid2">
+        <div class="field"><span class="field-label">Data abertura:</span><span class="field-value">${dAbTxt}</span></div>
+        <div class="field"><span class="field-label">Solicitante:</span><span class="field-value">${esc(sol[COLS.B]||'—')}</span></div>
+        <div class="field"><span class="field-label">Telefone:</span><span class="field-value">${esc(sol[COLS.C]||'—')}</span></div>
+        <div class="field"><span class="field-label">Canal:</span><span class="field-value">${esc(sol[COLS.E]||'—')}</span></div>
+        <div class="field"><span class="field-label">Assessoria:</span><span class="field-value">${esc(sol[COLS.F]||'—')}</span></div>
+        <div class="field"><span class="field-label">Corretora:</span><span class="field-value">${esc(sol[COLS.G]||'—')}</span></div>
+        <div class="field"><span class="field-label">Nº LECOM:</span><span class="field-value">${esc(sol[COLS.H]||'—')}</span></div>
+        <div class="field"><span class="field-label">Assunto:</span><span class="field-value">${esc(sol[COLS.I]||'—')}</span></div>
+      </div>
+    </div>`;
+}
+
+function slaBox(sol){
+  if (sol._sla.estado === 'vencido') return `
+    <div class="sla-box sla-warn">
+      <div style="flex:1">
+        <div style="color:var(--vermelho);font-weight:600;font-size:12px">⚠ VENCIDO · ${sol._sla.atraso} d.u. sem retorno</div>
+        <div class="hint">A data real do retorno será registrada na fase operacional (depois da inspeção X/Y).</div>
+      </div>
+      <input type="date" class="input-ro" disabled>
+    </div>`;
+  if (sol._sla.estado === 'retornado_ok' || sol._sla.estado === 'retornado_atraso') return `
+    <div class="sla-box sla-ok">
+      <div style="flex:1">
+        <div style="color:var(--verde);font-weight:600;font-size:12px">✓ RETORNADO EM ${formatarBR(sol._dRetorno)}</div>
+        <div class="hint">${sol._sla.estado==='retornado_ok'?'Dentro do prazo oficial':'Retornado com '+sol._sla.atraso+' d.u. após o prazo'}</div>
+      </div>
+    </div>`;
+  if (sol._sla.estado === 'no_prazo') return `
+    <div class="sla-box sla-neutro">
+      <div style="flex:1">
+        <div style="color:var(--amarelo);font-weight:600;font-size:12px">No prazo</div>
+        <div class="hint">Ainda dentro do SLA oficial de 1 dia útil</div>
+      </div>
+    </div>`;
+  return `<div class="sla-box"><div style="flex:1"><div style="color:var(--fg2);font-size:12px">${sol._sla.texto}</div></div></div>`;
+}
+
+function statusSecao(sol){
+  const statusHtml = sol._statusZ ? `<b>${esc(sol._statusZ)}</b>` : `<i>Em Aberto</i> <span class="hint">(coluna Z vazia · interface mostra padrão)</span>`;
+  let aviso = '';
+  if (sol._consistencia === 'inconsistente_reg_sem_data') {
+    aviso = `<div class="alert vermelho">⚠ <b>Inconsistência:</b> Status "Regularizado" sem Data de Regularização preenchida. Conferir manualmente.</div>`;
+  } else if (sol._consistencia === 'inconsistente_v_sem_status') {
+    aviso = `<div class="alert">⚠ <b>Regularização registrada — confirmar Status:</b> Data de Regularização (V) preenchida, mas Status (Z) vazio. Confirmar Status na fase operacional.</div>`;
+  } else if (sol._consistencia === 'inconsistente_z_aberto_com_v') {
+    aviso = `<div class="alert vermelho">⚠ <b>Inconsistência:</b> Status "Em Aberto" com Data de Regularização (V) preenchida. Conferir qual é a situação real desta solicitação.</div>`;
+  }
+  return `
+    <div class="section">
+      <div class="section-title verde">🏷 STATUS GERAL (coluna Z)</div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <span style="color:var(--fg2);font-size:12px">Status atual:</span>
+        <span style="font-size:13px">${statusHtml}</span>
+        <span class="hint">Valores permitidos: Em Aberto / Regularizado</span>
+      </div>
+      ${aviso}
+      <div class="alert info" style="margin-top:10px">
+        🔎 Fase 2A · a edição de Status será liberada na fase operacional, apenas mediante confirmação explícita. Nenhuma célula vazia é alterada em massa.
+      </div>
+    </div>`;
+}
+
+function renderModalAbertura(sol){
+  const linhasTime = ETAPAS_ABERTURA.map((et, idx) => {
+    const dEt = parseData(sol[et.key]);
+    const etapaAtual = sol._etapaAtual && sol._etapaAtual.indexOf(et.nome.replace(/^\d+\.\s*/,''))>=0;
+    if (dEt) {
+      return `<div class="step done"><div class="step-nome">${esc(et.nome)}</div><div class="step-data">${formatarBR(dEt)}</div></div>`;
+    } else if (etapaAtual) {
+      const dias = sol._diasNaEtapa!=null ? `<span class="step-dias">⏳ há ${sol._diasNaEtapa} d.u.</span>` : '';
+      return `<div class="step current"><div class="step-nome">${esc(et.nome)}</div>${dias}<div class="step-status">etapa atual · leitura</div></div>`;
+    } else {
+      const bloq = idx===ETAPAS_ABERTURA.length-1 ? 'bloqueado · aguarda etapas 1-9' : 'pendente';
+      return `<div class="step pend"><div class="step-nome">${esc(et.nome)}</div><div class="step-status">${bloq}</div></div>`;
+    }
+  }).join('');
+
+  return `
+    ${metricasModal(sol)}
+    ${pillsBase(sol)}
+    ${area1Formulario(sol)}
+    <div class="section">
+      <div class="section-title">📞 RETORNO AO CORRETOR · SLA oficial 1 d.u.</div>
+      ${slaBox(sol)}
+    </div>
+    <div class="section">
+      <div class="section-title laranja">⚙ TIMELINE DO PROCESSO · 10 ETAPAS</div>
+      <div class="timeline">${linhasTime}</div>
+      <div class="alert info">🔎 Fase 2A: as datas das etapas são exibidas como estão na planilha. Edição e correção com justificativa serão habilitadas na fase operacional.</div>
+    </div>
+    ${statusSecao(sol)}`;
+}
+
+function renderModalSimples(sol){
+  const dSF = parseData(sol[COLS.L]);
+  const numSF = String(sol[COLS.K]||'').trim();
+  const dReg = sol._dRegul;
+  return `
+    ${metricasModal(sol)}
+    ${pillsBase(sol)}
+    ${area1Formulario(sol)}
+    <div class="section">
+      <div class="section-title">📞 RETORNO AO CORRETOR · SLA oficial 1 d.u.</div>
+      ${slaBox(sol)}
+    </div>
+    <div class="section">
+      <div class="section-title laranja">⚙ ANDAMENTO DO CHAMADO SALESFORCE</div>
+      <div class="timeline">
+        <div class="step done">
+          <div class="step-nome">1. Solicitação recebida</div>
+          <div class="step-data">${sol._dAbertura?formatarBR(sol._dAbertura):'—'}</div>
+        </div>
+        <div class="step ${dSF?'done':'current'}">
+          <div class="step-nome">2. Chamado Salesforce aberto</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
+            <span class="field-label" style="min-width:auto">Nº:</span>
+            <span class="input-ro" style="min-width:140px;display:inline-block">${esc(numSF||'(vazio)')}</span>
+            <span class="field-label" style="min-width:auto">Data:</span>
+            <span class="input-ro" style="min-width:120px;display:inline-block">${dSF?formatarBR(dSF):'(vazio)'}</span>
+          </div>
+        </div>
+        <div class="step ${dReg?'done':(dSF?'current':'pend')}">
+          <div class="step-nome">3. Aguardando resolução</div>
+          ${dSF&&!dReg?`<span class="step-dias">⏳ há ${diasUteisApos(dSF,HOJE)} d.u.</span>`:''}
+          <div class="step-status">sem SLA oficial</div>
+        </div>
+        <div class="step ${dReg?'done':'pend'}">
+          <div class="step-nome">4. Regularização</div>
+          ${dReg?`<div class="step-data">${formatarBR(dReg)}</div>`:'<div class="step-status">pendente</div>'}
+        </div>
+      </div>
+      <div class="alert info">🔎 Fase 2A: dados exibidos somente leitura. A edição será habilitada na fase operacional com validação de que a data registrada representa o evento real.</div>
+    </div>
+    ${statusSecao(sol)}`;
+}
+
+// ============================================================================
+// ABAS / UTIL
+// ============================================================================
+function setTab(id, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+  if (id === 'hist') renderHistorico();
+  if (id === 'parceiros') inicializarParceiros();
+  window.scrollTo(0,0);
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============================================================================
+// VISÃO PARA PARCEIROS — relatório interno para envio manual ao parceiro
+// ============================================================================
+// Fonte: TODAS_SOLICITACOES (via listar). Nenhuma gravação. Nenhuma nova rota.
+// Filtragem SEMPRE restrita à entidade selecionada — nunca mistura corretoras.
+// IDs apresentados APENAS quando sol.id existe (não gera IDs falsos).
+// Tempo médio = média aritmética; se amostra = 0, mostra "Sem dados suficientes".
+// Próxima ação = sugestão quando há regra oficial; caso contrário, texto neutro.
+
+let PARC_ULTIMO_RESUMO_TEXTO = '';   // texto do WhatsApp, para copiar
+let PARC_ULTIMA_GERACAO = null;      // Date da última geração do relatório
+// Snapshot dos critérios usados para gerar o último relatório. Permite recalcular
+// automaticamente quando os dados forem atualizados (via refresh ou volta à aba),
+// desde que a entidade ainda exista. Null = nenhum relatório gerado ainda.
+let PARC_ULTIMA_SELECAO = null;      // { tipo, entidade, periodoDe, periodoAte }
+
+// Verifica se a entidade da seleção ainda existe nos dados válidos atuais
+function parcEntidadeAindaExiste(selecao){
+  if (!selecao || !selecao.entidade) return false;
+  const colLetra = (selecao.tipo === 'assessoria') ? COLS.F : COLS.G;
+  return TODAS_SOLICITACOES.some(s =>
+    s._valida && String(s[colLetra]||'').trim() === selecao.entidade
+  );
+}
+
+function inicializarParceiros(){
+  const tipoSel = document.getElementById('parcTipo');
+  const entSel  = document.getElementById('parcEntidade');
+  const label   = document.getElementById('parcEntidadeLabel');
+  const dePick  = document.getElementById('parcPeriodoDe');
+  const atePick = document.getElementById('parcPeriodoAte');
+  if (!tipoSel || !entSel) return;
+
+  // Decide o cenário de inicialização ANTES de qualquer manipulação do DOM.
+  // Isso impede que atualizarOpcoes() apague PARC_ULTIMA_SELECAO por efeito colateral
+  // antes de termos checado se a entidade salva ainda existe.
+  //   'nenhuma'   = não há relatório salvo
+  //   'restaurar' = há snapshot e a entidade salva ainda consta nos dados válidos
+  //   'removida'  = havia snapshot, mas a entidade sumiu dos dados válidos
+  let cenario;
+  if (!PARC_ULTIMA_SELECAO)                            cenario = 'nenhuma';
+  else if (parcEntidadeAindaExiste(PARC_ULTIMA_SELECAO)) cenario = 'restaurar';
+  else                                                  cenario = 'removida';
+
+  // Popula opções do dropdown conforme o tipo selecionado.
+  // DELIBERADAMENTE não chama resetarRelatorioParceiros aqui — a limpeza é
+  // responsabilidade de quem muda o tipo (handler abaixo) ou do cenário 'removida'.
+  const atualizarOpcoes = () => {
+    const tipo = tipoSel.value;
+    const colLetra = (tipo === 'assessoria') ? COLS.F : COLS.G;
+    const nomeCol  = (tipo === 'assessoria') ? 'Assessoria' : 'Corretora';
+    label.textContent = nomeCol;
+    const universoValido = TODAS_SOLICITACOES.filter(s => s._valida);
+    const valores = Array.from(new Set(
+      universoValido.map(s => String(s[colLetra]||'').trim()).filter(v => v !== '')
+    )).sort((a,b) => a.localeCompare(b,'pt-BR'));
+    const atual = entSel.value;
+    const html = [`<option value="">— selecione ${tipo === 'assessoria' ? 'uma assessoria' : 'uma corretora'} —</option>`];
+    valores.forEach(v => {
+      const sel = (v === atual) ? ' selected' : '';
+      html.push(`<option value="${esc(v)}"${sel}>${esc(v)}</option>`);
+    });
+    entSel.innerHTML = html.join('');
+    // Se o valor atual sumiu das opções, apenas zera o select — sem mexer em
+    // snapshot ou relatório. Esses efeitos são tratados nos handlers explícitos.
+    if (atual && !valores.includes(atual)) {
+      entSel.value = '';
+    }
+  };
+
+  // Bind único (não re-bind em refresh)
+  if (!tipoSel._bound) {
+    // Trocar o tipo SEMPRE limpa relatório, snapshot e botões.
+    // Nunca há exceção para nomes coincidentes entre Assessoria e Corretora:
+    // mesmo texto, entidades distintas → relatório anterior perde o sentido.
+    tipoSel.addEventListener('change', () => {
+      entSel.value = '';
+      resetarRelatorioParceiros();   // zera PARC_ULTIMA_SELECAO, botões e texto
+      atualizarOpcoes();
+    });
+    // Mudar entidade ou período também exige novo clique em Gerar
+    entSel.addEventListener('change',  resetarRelatorioParceiros);
+    dePick.addEventListener('change',  resetarRelatorioParceiros);
+    atePick.addEventListener('change', resetarRelatorioParceiros);
+    tipoSel._bound = true;
+  }
+
+  // Aplica o cenário decidido no início
+  if (cenario === 'restaurar') {
+    // Restaura seletores a partir do snapshot
+    tipoSel.value = PARC_ULTIMA_SELECAO.tipo;
+    if (dePick)  dePick.value  = PARC_ULTIMA_SELECAO.periodoDe  || '';
+    if (atePick) atePick.value = PARC_ULTIMA_SELECAO.periodoAte || '';
+    atualizarOpcoes();
+    // Agora que o dropdown tem as opções populadas, seta a entidade salva
+    entSel.value = PARC_ULTIMA_SELECAO.entidade;
+    recalcularRelatorioExistente();
+  } else if (cenario === 'removida') {
+    // Entidade sumiu dos dados — avisa com mensagem específica e zera estado.
+    atualizarOpcoes();
+    resetarRelatorioParceiros(
+      'A entidade antes selecionada não aparece mais nos dados válidos. Selecione uma nova e clique em <b>Gerar / Atualizar</b>.'
+    );
+  } else {
+    // cenario === 'nenhuma' — só popula opções do dropdown
+    atualizarOpcoes();
+  }
+}
+
+// Recalcula o relatório mantendo tipo/entidade/período da última seleção,
+// mas usando os dados mais recentes de TODAS_SOLICITACOES. Atualiza data/hora.
+// Pré-condição: entidade da seleção ainda existe (callers garantem).
+function recalcularRelatorioExistente(){
+  if (!PARC_ULTIMA_SELECAO) return;
+  const sel = PARC_ULTIMA_SELECAO;
+  const d = calcularDadosParceiros(sel.tipo, sel.entidade, sel.periodoDe, sel.periodoAte);
+  PARC_ULTIMA_GERACAO = new Date();
+  const rel = document.getElementById('parcRelatorio');
+  if (rel) rel.innerHTML = renderRelatorioParceiros(d);
+  const btnPdf = document.getElementById('parcPdf');
+  const btnWpp = document.getElementById('parcWpp');
+  if (btnPdf) btnPdf.disabled = false;
+  if (btnWpp) btnWpp.disabled = false;
+  PARC_ULTIMO_RESUMO_TEXTO = montarResumoWhatsApp(d);
+}
+
+function resetarRelatorioParceiros(mensagemCustom){
+  const el = document.getElementById('parcRelatorio');
+  const msg = mensagemCustom || 'Clique em <b>Gerar / Atualizar</b> para montar o relatório da entidade selecionada.';
+  if (el) el.innerHTML = `<div class="parceiro-vazio">${msg}</div>`;
+  const btnPdf = document.getElementById('parcPdf');
+  const btnWpp = document.getElementById('parcWpp');
+  if (btnPdf) btnPdf.disabled = true;
+  if (btnWpp) btnWpp.disabled = true;
+  PARC_ULTIMO_RESUMO_TEXTO = '';
+  PARC_ULTIMA_SELECAO = null;
+}
+
+// Calcula indicadores do relatório para a entidade selecionada
+function calcularDadosParceiros(tipo, entidade, periodoDe, periodoAte){
+  const colLetra = (tipo === 'assessoria') ? COLS.F : COLS.G;
+  // ESCOPO ESTRITO: apenas registros válidos cuja coluna correspondente bate EXATAMENTE
+  const validos = TODAS_SOLICITACOES.filter(s =>
+    s._valida && String(s[colLetra]||'').trim() === entidade
+  );
+
+  // Backlog = pendentes (não regularizadas), sem filtro de período
+  const pendentes = validos.filter(s => s._consistencia !== 'regularizada');
+  // Regularizadas no período (base = regularizadas; filtro = data de regularização dentro do intervalo)
+  const regsTodas = validos.filter(s => s._consistencia === 'regularizada');
+  const dDe  = parseData(periodoDe);
+  const dAte = parseData(periodoAte);
+  let regsPeriodo = regsTodas;
+  if (dDe)  regsPeriodo = regsPeriodo.filter(s => s._dRegul && s._dRegul >= dDe);
+  if (dAte) regsPeriodo = regsPeriodo.filter(s => s._dRegul && s._dRegul <= dAte);
+
+  // Tempo médio = média aritmética simples sobre tempoTotal das regularizadas no período
+  const tempos = regsPeriodo.map(s => s._tempoTotal).filter(t => typeof t === 'number');
+  const amostraN = tempos.length;
+  const temposMedia = amostraN > 0 ? Math.round(tempos.reduce((a,b)=>a+b,0) / amostraN) : null;
+
+  // Indicadores sobre o backlog
+  const slaVencidas  = pendentes.filter(s => s._sla.estado === 'vencido').length;
+  const aguardRet    = pendentes.filter(s => !s._dRetorno).length;
+  const comAlerta    = pendentes.filter(s => s._alertaAcomp).length;
+  const inconsist    = pendentes.filter(s => s._inconsistente).length;
+
+  // Distribuição por etapa (sobre pendentes)
+  const porEtapa = {};
+  pendentes.forEach(s => {
+    const e = s._etapaAtual || '(sem etapa)';
+    porEtapa[e] = (porEtapa[e] || 0) + 1;
+  });
+  const etapasOrdenadas = Object.entries(porEtapa).sort((a,b) => b[1]-a[1]);
+
+  // Mais antiga pendente (ordena por data abertura ASC, pega a primeira)
+  const maisAntiga = pendentes
+    .filter(s => s._dAbertura)
+    .sort((a,b) => a._dAbertura - b._dAbertura)[0] || null;
+
+  return {
+    tipo, entidade, periodoDe, periodoAte,
+    totalPendentes: pendentes.length,
+    pendentes, regsPeriodo, regsTodas,
+    slaVencidas, aguardRet, comAlerta, inconsist,
+    porEtapa: etapasOrdenadas,
+    maisAntiga,
+    tempoMedio: temposMedia, amostraN,
+    regularizadasPeriodoN: regsPeriodo.length,
+    temPeriodoFiltrado: !!(dDe || dAte)
+  };
+}
+
+function gerarRelatorioParceiros(){
+  const tipo = document.getElementById('parcTipo').value;
+  const entidade = document.getElementById('parcEntidade').value;
+  const periodoDe  = document.getElementById('parcPeriodoDe').value;
+  const periodoAte = document.getElementById('parcPeriodoAte').value;
+  const rel = document.getElementById('parcRelatorio');
+
+  if (!entidade) {
+    rel.innerHTML = `<div class="parceiro-vazio" style="color:#C53030">⚠ Selecione uma ${tipo === 'assessoria' ? 'assessoria' : 'corretora'} antes de gerar.</div>`;
+    return;
+  }
+
+  const d = calcularDadosParceiros(tipo, entidade, periodoDe, periodoAte);
+  PARC_ULTIMA_GERACAO = new Date();
+  // Snapshot dos critérios usados — permite recalcular depois com dados novos
+  PARC_ULTIMA_SELECAO = { tipo, entidade, periodoDe, periodoAte };
+
+  rel.innerHTML = renderRelatorioParceiros(d);
+  document.getElementById('parcPdf').disabled = false;
+  document.getElementById('parcWpp').disabled = false;
+  PARC_ULTIMO_RESUMO_TEXTO = montarResumoWhatsApp(d);
+}
+
+function renderRelatorioParceiros(d){
+  const nomeEntidade = esc(d.entidade);
+  const tipoRot = d.tipo === 'assessoria' ? 'Assessoria' : 'Corretora';
+  const geradoEm = PARC_ULTIMA_GERACAO
+    ? PARC_ULTIMA_GERACAO.toLocaleString('pt-BR')
+    : '—';
+  const periodoRot = d.temPeriodoFiltrado
+    ? `${d.periodoDe ? formatarBR(parseData(d.periodoDe)) : '—'} a ${d.periodoAte ? formatarBR(parseData(d.periodoAte)) : '—'}`
+    : 'Todo o período';
+
+  // KPIs — "dias úteis" por extenso, com concordância (1 dia útil / N dias úteis)
+  const kpiTempoUnidade = d.tempoMedio === 1 ? 'dia útil' : 'dias úteis';
+  const kpiTempo = d.tempoMedio != null
+    ? `<div class="parceiro-kpi-valor">${d.tempoMedio} <span style="font-size:14px;color:#718096">${kpiTempoUnidade}</span></div>
+       <div class="parceiro-kpi-sub">base de ${d.amostraN} caso(s)</div>`
+    : `<div class="parceiro-kpi-sem-dados">Sem dados suficientes</div>
+       <div class="parceiro-kpi-sub">nenhum caso regularizado no período</div>`;
+
+  // KPIs em linguagem externa — sem referências a nomes de colunas ou abas.
+  // "Inconsistências" não aparece como indicador no relatório externo;
+  // casos nessa condição recebem tratamento neutro ("Em conferência") na próxima ação.
+  // "Etapas que exigem acompanhamento" substitui "Com alerta interno": inclui subtexto
+  // explicando discretamente que não representa SLA oficial.
+  const kpis = `
+    <div class="parceiro-kpis">
+      <div class="parceiro-kpi"><div class="parceiro-kpi-label">Pendentes</div><div class="parceiro-kpi-valor">${d.totalPendentes}</div><div class="parceiro-kpi-sub">solicitações em aberto</div></div>
+      <div class="parceiro-kpi ${d.slaVencidas>0?'critico':''}"><div class="parceiro-kpi-label">⚠ Prazo de retorno vencido</div><div class="parceiro-kpi-valor">${d.slaVencidas}</div><div class="parceiro-kpi-sub">prazo oficial de 1 dia útil</div></div>
+      <div class="parceiro-kpi ${d.aguardRet>0?'alerta':''}"><div class="parceiro-kpi-label">Aguardando retorno</div><div class="parceiro-kpi-valor">${d.aguardRet}</div><div class="parceiro-kpi-sub">retorno ao corretor ainda não registrado</div></div>
+      <div class="parceiro-kpi ${d.comAlerta>0?'alerta':''}"><div class="parceiro-kpi-label">Etapas que exigem acompanhamento</div><div class="parceiro-kpi-valor">${d.comAlerta}</div><div class="parceiro-kpi-sub">atenção recomendada · não representa prazo oficial</div></div>
+    </div>
+    <div class="parceiro-kpis" style="margin-top:14px">
+      <div class="parceiro-kpi ok"><div class="parceiro-kpi-label">Regularizadas no período</div><div class="parceiro-kpi-valor">${d.regularizadasPeriodoN}</div><div class="parceiro-kpi-sub">${esc(periodoRot)}</div></div>
+      <div class="parceiro-kpi" style="grid-column:span 2"><div class="parceiro-kpi-label">Tempo médio de resolução</div>${kpiTempo}</div>
+    </div>`;
+
+  // Mais antiga
+  let destaqueMaisAntiga = '';
+  if (d.maisAntiga) {
+    const sol = d.maisAntiga;
+    const idTxt = sol.id ? `ID ${esc(sol.id)}` : 'sem identificador estável';
+    const dias = sol._tempoTotal != null
+      ? `${sol._tempoTotal} ${sol._tempoTotal === 1 ? 'dia útil' : 'dias úteis'} decorridos`
+      : 'tempo não calculado';
+    destaqueMaisAntiga = `
+      <div class="parceiro-secao">
+        <div class="parceiro-secao-titulo">Solicitação mais antiga pendente</div>
+        <div class="parceiro-destaque">
+          <h4>⏳ Atenção prioritária</h4>
+          <div class="linha">
+            <b>Aberta em ${formatarBR(sol._dAbertura)}</b> · ${idTxt}<br>
+            <b>Motivo:</b> ${esc(obterMotivo(sol))} · <b>Etapa:</b> ${esc(sol._etapaAtual||'—')} · <b>${esc(dias)}</b>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Distribuição por etapa
+  const maxQtd = Math.max(...d.porEtapa.map(e => e[1]), 1);
+  const etapasHtml = d.porEtapa.length > 0
+    ? d.porEtapa.map(([nome, qtd]) => `
+        <div class="parceiro-etapa">
+          <div class="parceiro-etapa-nome">${esc(nome)}</div>
+          <div class="parceiro-etapa-barra"><div class="parceiro-etapa-fill" style="width:${(qtd/maxQtd)*100}%"></div></div>
+          <div class="parceiro-etapa-qtd">${qtd}</div>
+        </div>`).join('')
+    : '<div style="color:#718096;font-style:italic">Nenhuma solicitação pendente.</div>';
+
+  // Casos pendentes (tabela clean, SEM dados pessoais)
+  // Ordena pela mais antiga primeiro
+  const pendentesOrdenadas = d.pendentes
+    .filter(s => s._dAbertura)
+    .sort((a,b) => a._dAbertura - b._dAbertura);
+
+  const linhasHtml = pendentesOrdenadas.map(s => {
+    // ID: só se existir de verdade; não gera nada falso
+    const idCell = s.id
+      ? `<b>${esc(s.id)}</b>`
+      : `<span style="color:#718096;font-style:italic">—</span>`;
+    // "dias úteis" por extenso, com concordância singular/plural
+    const diasEt  = (s._diasNaEtapa  != null) ? `${s._diasNaEtapa} ${s._diasNaEtapa === 1 ? 'dia útil' : 'dias úteis'}` : '—';
+    const tempTot = (s._tempoTotal   != null) ? `${s._tempoTotal} ${s._tempoTotal === 1 ? 'dia útil' : 'dias úteis'}` : '—';
+    // Badge de prazo — mesma unidade por extenso
+    let prazoBadge;
+    const atrasoTxt = `${s._sla.atraso} ${s._sla.atraso === 1 ? 'dia útil' : 'dias úteis'}`;
+    switch(s._sla.estado){
+      case 'vencido':         prazoBadge = `<span class="p-badge critico">Prazo vencido · ${atrasoTxt}</span>`; break;
+      case 'retornado_ok':    prazoBadge = `<span class="p-badge ok">Retornado · OK</span>`; break;
+      case 'retornado_atraso':prazoBadge = `<span class="p-badge alerta">Retornado · ${atrasoTxt} após</span>`; break;
+      case 'no_prazo':        prazoBadge = `<span class="p-badge neutro">No prazo</span>`; break;
+      default:                prazoBadge = `<span class="p-badge neutro">—</span>`;
+    }
+    if (s._alertaAcomp) prazoBadge += ` <span class="p-badge alerta">⏳ Acompanhar</span>`;
+    // Próxima ação — regras de atribuição de responsabilidade:
+    // Hoje, os dados disponíveis permitem atribuir responsabilidade com segurança
+    // APENAS no caso do prazo oficial de retorno ao corretor (regra: 1 dia útil
+    // após abertura, responsabilidade da equipe interna Hapvida).
+    // Nos demais casos (etapas internas, chamados em andamento, ou inconsistências
+    // de preenchimento), não há regra que permita afirmar com segurança se a próxima
+    // providência está com a área interna ou com o parceiro — a responsabilidade
+    // precisa ser confirmada manualmente.
+    // Para inconsistências de preenchimento, usamos texto neutro sem expor estrutura
+    // interna, conforme regra de linguagem externa.
+    let prox;
+    if (s._inconsistente) {
+      prox = `<span class="p-prox-neutro">Andamento em conferência pela equipe responsável</span>`;
+    } else if (s._sla.estado === 'vencido' || s._sla.estado === 'no_prazo') {
+      // Única atribuição segura hoje: retorno ao corretor é obrigação interna por regra oficial
+      prox = `<span class="p-prox-acao">Dar retorno ao corretor <span style="color:#4a5568;font-weight:400">· equipe interna</span></span>`;
+    } else {
+      prox = `<span class="p-prox-neutro">Responsabilidade a confirmar pela equipe responsável</span>`;
+    }
+    return `
+      <tr>
+        <td>${idCell}</td>
+        <td>${formatarBR(s._dAbertura)}</td>
+        <td>${esc(obterMotivo(s))}</td>
+        <td>${esc(s._etapaAtual||'—')}</td>
+        <td>${diasEt}</td>
+        <td>${tempTot}</td>
+        <td>${prazoBadge}</td>
+        <td>${prox}</td>
+      </tr>`;
+  }).join('');
+
+  const tabela = linhasHtml ? `
+    <div class="parceiro-secao">
+      <div class="parceiro-secao-titulo">Solicitações pendentes · ordenadas da mais antiga</div>
+      <table class="parceiro-tabela">
+        <thead><tr>
+          <th>ID</th><th>Abertura</th><th>Motivo</th><th>Etapa atual</th>
+          <th>Tempo na etapa</th><th>Tempo total</th><th>Prazo</th><th>Próxima ação</th>
+        </tr></thead>
+        <tbody>${linhasHtml}</tbody>
+      </table>
+    </div>`
+    : `<div class="parceiro-secao"><div style="color:#718096;font-style:italic">Nenhuma solicitação pendente para esta ${d.tipo}.</div></div>`;
+
+  return `
+    <div class="parceiro-cabecalho">
+      <h1>Acompanhamento de Solicitações</h1>
+      <div class="meta">
+        <b>${esc(tipoRot)}:</b> ${nomeEntidade}<br>
+        <b>Gerado em:</b> ${esc(geradoEm)} · <b>Período dos indicadores:</b> ${esc(periodoRot)}<br>
+        <b>Fonte:</b> planilha oficial · posição exclusiva deste momento
+      </div>
+    </div>
+    <div class="parceiro-secao">
+      <div class="parceiro-secao-titulo">Indicadores</div>
+      ${kpis}
+    </div>
+    ${destaqueMaisAntiga}
+    <div class="parceiro-secao">
+      <div class="parceiro-secao-titulo">Distribuição por etapa atual (pendentes)</div>
+      <div class="parceiro-etapas">${etapasHtml}</div>
+    </div>
+    ${tabela}
+    <div class="parceiro-rodape">
+      <b>Observações:</b> O prazo oficial de retorno ao corretor é de 1 dia útil após a abertura.
+      "Etapas que exigem acompanhamento" sinaliza casos parados há 5 ou mais dias úteis — não representa um prazo oficial.
+      Os cálculos consideram apenas dias úteis (feriados cadastrados no sistema, sábados e domingos são descartados).
+      Dados sensíveis internos foram omitidos deste relatório.
+    </div>`;
+}
+
+// Monta texto para WhatsApp com os números corretos; não inventa dados.
+// Diferencia "0" (contagem zero) de "sem dados" (não aplicável).
+function montarResumoWhatsApp(d){
+  const data = PARC_ULTIMA_GERACAO
+    ? PARC_ULTIMA_GERACAO.toLocaleDateString('pt-BR') + ' às ' + PARC_ULTIMA_GERACAO.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+    : '—';
+  const tipoRot = d.tipo === 'assessoria' ? 'assessoria' : 'corretora';
+  const periodoRot = d.temPeriodoFiltrado
+    ? `${d.periodoDe ? formatarBR(parseData(d.periodoDe)) : '—'} a ${d.periodoAte ? formatarBR(parseData(d.periodoAte)) : '—'}`
+    : 'todo o período';
+
+  const linhas = [];
+  linhas.push(`📊 *Acompanhamento de Solicitações*`);
+  linhas.push(`${d.tipo === 'assessoria' ? 'Assessoria' : 'Corretora'}: *${d.entidade}*`);
+  linhas.push(`Posição em ${data}`);
+  linhas.push('');
+  linhas.push(`• *${d.totalPendentes}* pendente(s) em aberto`);
+  linhas.push(`• *${d.slaVencidas}* com prazo de retorno vencido (prazo oficial de 1 dia útil)`);
+  linhas.push(`• *${d.aguardRet}* aguardando retorno ao corretor`);
+  if (d.comAlerta > 0) linhas.push(`• *${d.comAlerta}* em etapa que exige acompanhamento (atenção recomendada; não é prazo oficial)`);
+
+  // Tempo médio: diferencia zero de "sem dados"; concordância singular/plural
+  if (d.tempoMedio != null) {
+    const unid = d.tempoMedio === 1 ? 'dia útil' : 'dias úteis';
+    linhas.push(`• Tempo médio de resolução: *${d.tempoMedio} ${unid}* (base de ${d.amostraN} caso${d.amostraN === 1 ? '' : 's'} regularizado${d.amostraN === 1 ? '' : 's'} no período: ${periodoRot})`);
+  } else {
+    linhas.push(`• Tempo médio de resolução: sem dados suficientes no período ${periodoRot}`);
+  }
+  linhas.push(`• Regularizadas no período (${periodoRot}): *${d.regularizadasPeriodoN}*`);
+
+  // Mais antiga — concordância singular/plural
+  if (d.maisAntiga) {
+    const sol = d.maisAntiga;
+    const idTxt = sol.id ? `ID ${sol.id}` : 'sem identificador estável';
+    let dias = '';
+    if (sol._tempoTotal != null) {
+      const u = sol._tempoTotal === 1 ? 'dia útil' : 'dias úteis';
+      dias = ` · ${sol._tempoTotal} ${u} decorridos`;
+    }
+    linhas.push('');
+    linhas.push(`⏳ *Mais antiga pendente:*`);
+    linhas.push(`  Aberta em ${formatarBR(sol._dAbertura)} (${idTxt})`);
+    linhas.push(`  Motivo: ${obterMotivo(sol)} · Etapa: ${sol._etapaAtual||'—'}${dias}`);
+  }
+
+  linhas.push('');
+  linhas.push(`_Relatório gerado internamente pela Gerência Comercial Hapvida._`);
+  return linhas.join('\n');
+}
+
+function imprimirRelatorio(){
+  window.print();
+}
+
+async function copiarWhatsApp(){
+  if (!PARC_ULTIMO_RESUMO_TEXTO) {
+    alert('Gere um relatório antes de copiar.');
+    return;
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(PARC_ULTIMO_RESUMO_TEXTO);
+    } else {
+      // fallback via textarea temporário
+      const ta = document.createElement('textarea');
+      ta.value = PARC_ULTIMO_RESUMO_TEXTO;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    const btn = document.getElementById('parcWpp');
+    const original = btn.textContent;
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  } catch (e) {
+    alert('Não foi possível copiar automaticamente. Erro: ' + e.message);
+  }
+}
+
+// ============================================================================
+// INICIAR
+// ============================================================================
+window.addEventListener('DOMContentLoaded', ()=>{
+  // Tentar restaurar sessão
+  const t = sessionStorage.getItem('csol_token');
+  if (t) {
+    TOKEN = t;
+    inicializarApp().catch(()=>{
+      sessionStorage.removeItem('csol_token');
+      TOKEN = null;
+    });
+  }
+  // Enter para submeter login
+  document.getElementById('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+  document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginSenha').focus(); });
+});
+</script>
+
+</body>
+</html>
